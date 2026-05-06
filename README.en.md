@@ -7,6 +7,22 @@
 
 Unified CLI for Chaitin security products
 
+## Skill
+
+This project provides an AI Agent skill. Once installed, AI agents (Claude Code, Cursor, etc.) can invoke `chaitin-cli` commands to manage Chaitin security products directly.
+
+```bash
+npx skills add chaitin/chaitin-cli
+```
+
+After installation, simply describe your needs to the AI agent, for example:
+
+- "Show me recent attack logs in SafeLine"
+- "Create a scan task in X-Ray"
+- "List vulnerability events in CloudWalker"
+
+Skill will install the cli automatically
+
 ## Demo
 
 ### CloudWalker
@@ -134,21 +150,9 @@ This is equivalent to:
 ./bin/chaitin-cli chaitin
 ```
 
-## AI Agent Skill
+## Development
 
-This project provides an AI Agent skill. Once installed, AI agents (Claude Code, Cursor, etc.) can invoke `chaitin-cli` commands to manage Chaitin security products directly.
-
-```bash
-npx skills add chaitin/chaitin-cli
-```
-
-After installation, simply describe your needs to the AI agent, for example:
-
-- "Show me recent attack logs in SafeLine"
-- "Create a scan task in X-Ray"
-- "List vulnerability events in CloudWalker"
-
-## Task
+tasks:
 
 ```bash
 task build
