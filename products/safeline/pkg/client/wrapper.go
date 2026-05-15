@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 // Envelope is the standard Skyview API response wrapper.
@@ -204,4 +205,66 @@ func (c *Client) DoPaginated(path string, query map[string]string) ([]json.RawMe
 	}
 
 	return allItems, nil
+}
+
+// paramErrorPatterns are substrings that indicate an API error caused by
+// an unsupported or unrecognised query parameter (typically from newer
+// client versions talking to older server versions).
+var paramErrorPatterns = []string{
+	"[invalid_param",
+	"[invalid_filter_key",
+	"unknown parameter",
+	"unexpected parameter",
+}
+
+// IsParamError reports whether err is caused by an unsupported parameter.
+// It checks the error message for patterns returned by the SafeLine API
+// when a query parameter is not recognised by the server version.
+func IsParamError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	for _, p := range paramErrorPatterns {
+		if strings.Contains(msg, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// DoWithFallback performs an HTTP request and retries with fallback query
+// parameters when the server returns a parameter validation error.
+// This supports compatibility with older server versions that reject
+// newer query parameters.
+func (c *Client) DoWithFallback(method, path string, body io.Reader, query, fallbackQuery map[string]string) (*Envelope, error) {
+	env, err := c.Do(method, path, body, query)
+	if err == nil {
+		return env, nil
+	}
+	if IsParamError(err) && fallbackQuery != nil {
+		if fbEnv, fbErr := c.Do(method, path, body, fallbackQuery); fbErr == nil {
+			return fbEnv, nil
+		}
+	}
+	return env, err
+}
+
+// DoMultiWithFallback performs an HTTP request with multi-value query
+// parameter support and retries with fallback parameters when the server
+// returns a parameter validation error.
+func (c *Client) DoMultiWithFallback(method, path string, body io.Reader,
+	singleQuery map[string]string, multiQuery map[string][]string,
+	fallbackSingleQuery map[string]string, fallbackMultiQuery map[string][]string,
+) (*Envelope, error) {
+	env, err := c.DoMulti(method, path, body, singleQuery, multiQuery)
+	if err == nil {
+		return env, nil
+	}
+	if IsParamError(err) && (fallbackSingleQuery != nil || fallbackMultiQuery != nil) {
+		if fbEnv, fbErr := c.DoMulti(method, path, body, fallbackSingleQuery, fallbackMultiQuery); fbErr == nil {
+			return fbEnv, nil
+		}
+	}
+	return env, err
 }
