@@ -201,11 +201,22 @@ commands:
     short: Get risk strategy auxiliary info
 
   - path: [risk, event, list]
+    operationId: FilterAPI_get
+    short: List risk event groups
+    long: List risk event groups through APISec FilterAPI. The default query sets scope=risk:risk_event; add filters with --query key=value.
+    query:
+      scope: risk:risk_event
+    examples:
+      - chaitin-cli apisec risk event list --query count=20 --query offset=0 --output json
+  - path: [risk, event, detail]
     operationId: RiskEventAPI_get
-    short: Query risk events
+    short: Query risk event detail
   - path: [risk, event, group]
     operationId: RiskEventGroupAPI_get
     short: Query risk event group
+  - path: [risk, event, statistics]
+    operationId: RiskEventGroupStatistics_get
+    short: Query risk event group statistics
   - path: [risk, event, update-group]
     operationId: RiskEventGroupAPI_put
     short: Update risk event group

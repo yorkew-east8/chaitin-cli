@@ -1,6 +1,7 @@
 package apisec
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -166,6 +167,15 @@ func sortedCommandKeys(commands map[string]*cobra.Command) []string {
 	return keys
 }
 
+func sortedStringKeys(values map[string]string) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func rawParentName(path string) string {
 	segments := strings.Split(strings.Trim(path, "/"), "/")
 	if len(segments) == 0 {
@@ -192,6 +202,9 @@ func (p *Parser) createOperationCommand(use, method, path string, op *Operation,
 		Short: short,
 		Long:  buildOperationHelp(method, path, op, mapped),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if mapped != nil {
+				cmd.SetContext(context.WithValue(cmd.Context(), mappedCommandContextKey{}, mapped))
+			}
 			return p.executeCommand(cmd, method, path, op)
 		},
 	}
@@ -206,6 +219,7 @@ func (p *Parser) createOperationCommand(use, method, path string, op *Operation,
 		cmd.Flags().String("body", "", "Request body as JSON string. Use this for complex or generated JSON input.")
 		cmd.Flags().String("body-file", "", "Path to a JSON file used as request body. Takes precedence over --body.")
 	}
+	cmd.Flags().StringArray("query", nil, "Additional query parameter in key=value form. Repeat for multiple filters or dynamic API query keys.")
 
 	return cmd
 }
@@ -247,6 +261,14 @@ func buildOperationHelp(method, path string, op *Operation, mapped *MappedComman
 			b.WriteString("- Request body is required by the API schema.\n")
 		}
 	}
+	if mapped != nil && len(mapped.Query) > 0 {
+		b.WriteString("\nDefault query:\n")
+		for _, key := range sortedStringKeys(mapped.Query) {
+			fmt.Fprintf(&b, "- %s=%s\n", key, mapped.Query[key])
+		}
+	}
+	b.WriteString("\nDynamic query filters:\n")
+	b.WriteString("- Use --query key=value for query keys not listed as dedicated flags. Repeat --query for multiple values.\n")
 	if mapped != nil && len(mapped.Examples) > 0 {
 		b.WriteString("\nExamples:\n")
 		for _, example := range mapped.Examples {
@@ -299,6 +321,11 @@ func mappedFlagForParam(mapped *MappedCommand, param Parameter) *MappedFlag {
 
 func (p *Parser) executeCommand(cmd *cobra.Command, method, path string, op *Operation) error {
 	query := make(url.Values)
+	if mapped := mappedCommandFromContext(cmd); mapped != nil {
+		for key, value := range mapped.Query {
+			query.Set(key, value)
+		}
+	}
 	body, err := collectRequestBody(cmd, op.RequestBody)
 	if err != nil {
 		return err
@@ -323,6 +350,9 @@ func (p *Parser) executeCommand(cmd *cobra.Command, method, path string, op *Ope
 			query.Set(param.Name, value)
 		}
 	}
+	if err := collectDynamicQuery(cmd, query); err != nil {
+		return err
+	}
 
 	client := getClient(cmd)
 	var result any
@@ -333,6 +363,29 @@ func (p *Parser) executeCommand(cmd *cobra.Command, method, path string, op *Ope
 		return err
 	}
 	return getRenderer(cmd).Render(result)
+}
+
+func mappedCommandFromContext(cmd *cobra.Command) *MappedCommand {
+	value := cmd.Context().Value(mappedCommandContextKey{})
+	mapped, _ := value.(*MappedCommand)
+	return mapped
+}
+
+type mappedCommandContextKey struct{}
+
+func collectDynamicQuery(cmd *cobra.Command, query url.Values) error {
+	values, err := cmd.Flags().GetStringArray("query")
+	if err != nil {
+		return err
+	}
+	for _, item := range values {
+		key, value, ok := strings.Cut(item, "=")
+		if !ok || strings.TrimSpace(key) == "" {
+			return fmt.Errorf("invalid --query %q, want key=value", item)
+		}
+		query.Add(key, value)
+	}
+	return nil
 }
 
 func readParameterFlag(cmd *cobra.Command, param Parameter) (string, bool, error) {

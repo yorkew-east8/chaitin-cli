@@ -49,6 +49,7 @@ func TestGenerateRawCommands(t *testing.T) {
 
 func TestGenerateSemanticCommands(t *testing.T) {
 	api := loadMinimalOpenAPI(t)
+	api.Paths["/api/FilterAPI"] = PathItem{Get: &Operation{OperationID: "FilterAPI_get", Summary: "Filter data"}}
 	mapping := &CLIMapping{Commands: []MappedCommand{
 		{
 			Path:        []string{"asset", "app", "list"},
@@ -58,6 +59,14 @@ func TestGenerateSemanticCommands(t *testing.T) {
 			Examples:    []string{"chaitin-cli apisec asset app list --page 1"},
 			Flags: map[string]MappedFlag{
 				"page": {Name: "page-number", Description: "Page number to fetch."},
+			},
+		},
+		{
+			Path:        []string{"risk", "event", "list"},
+			OperationID: "FilterAPI_get",
+			Short:       "List risk event groups",
+			Query: map[string]string{
+				"scope": "risk:risk_event",
 			},
 		},
 	}}
@@ -91,6 +100,16 @@ func TestGenerateSemanticCommands(t *testing.T) {
 	}
 	if flag.Usage != "Page number to fetch." {
 		t.Fatalf("flag usage = %q, want mapped description", flag.Usage)
+	}
+	riskList := findCommandPath(commands, "risk", "event", "list")
+	if riskList == nil {
+		t.Fatalf("risk event list command not generated")
+	}
+	if !strings.Contains(riskList.Long, "Default query:") || !strings.Contains(riskList.Long, "scope=risk:risk_event") {
+		t.Fatalf("risk event list help missing default query: %s", riskList.Long)
+	}
+	if riskList.Flags().Lookup("query") == nil {
+		t.Fatalf("query flag not generated")
 	}
 }
 

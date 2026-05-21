@@ -1941,6 +1941,35 @@
         "x-cli-body-fallback": false
       }
     },
+    "/api/EnableDisablePreprocessPluginAPI": {
+      "put": {
+        "operationId": "EnableDisablePreprocessPluginAPI_put",
+        "summary": "PUT /api/EnableDisablePreprocessPluginAPI",
+        "tags": [
+          "plugin"
+        ],
+        "parameters": [],
+        "x-cli-body-fallback": false,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/EnableDisableRiskStrategyAPI": {
       "put": {
         "operationId": "EnableDisableRiskStrategyAPI_put",
@@ -2091,6 +2120,66 @@
                     "description": "ID 列表"
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/FilterAPI": {
+      "get": {
+        "operationId": "FilterAPI_get",
+        "summary": "GET /api/FilterAPI",
+        "tags": [
+          "filter"
+        ],
+        "parameters": [],
+        "x-cli-body-fallback": true
+      },
+      "delete": {
+        "operationId": "FilterAPI_delete",
+        "summary": "DELETE /api/FilterAPI",
+        "tags": [
+          "filter"
+        ],
+        "parameters": [],
+        "x-cli-body-fallback": true,
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/FilterDownloadAPI": {
+      "get": {
+        "operationId": "FilterDownloadAPI_get",
+        "summary": "GET /api/FilterDownloadAPI",
+        "tags": [
+          "filter"
+        ],
+        "parameters": [],
+        "x-cli-body-fallback": true
+      },
+      "post": {
+        "operationId": "FilterDownloadAPI_post",
+        "summary": "POST /api/FilterDownloadAPI",
+        "tags": [
+          "filter"
+        ],
+        "parameters": [],
+        "x-cli-body-fallback": true,
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
               }
             }
           }

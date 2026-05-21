@@ -142,6 +142,8 @@ def collect_methods(cls, class_nodes):
 def is_exported_api_view(cls, class_nodes):
     if class_has_true_assignment(cls, "__is_abstract"):
         return False
+    if cls.name.endswith("API"):
+        return True
 
     seen = set()
 

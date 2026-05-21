@@ -80,6 +80,7 @@ type MappedCommand struct {
 	Short       string                 `yaml:"short,omitempty"`
 	Long        string                 `yaml:"long,omitempty"`
 	Examples    []string               `yaml:"examples,omitempty"`
+	Query       map[string]string      `yaml:"query,omitempty"`
 	RawHidden   bool                   `yaml:"rawHidden,omitempty"`
 	Flags       map[string]MappedFlag  `yaml:"flags,omitempty"`
 	Metadata    map[string]interface{} `yaml:"metadata,omitempty"`
