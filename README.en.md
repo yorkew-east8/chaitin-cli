@@ -7,9 +7,21 @@
 
 Unified CLI for Chaitin security products
 
+## Quick Start
+
+Install directly on macOS / Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chaitin/chaitin-cli/main/skills/chaitin-cli/scripts/install-chaitin-cli.sh | bash
+```
+
+Windows users should download the matching package from [GitHub Releases](https://github.com/chaitin/chaitin-cli/releases), extract `chaitin-cli.exe`, and add it to PATH.
+
 ## Skill
 
 This project provides an AI Agent skill. Once installed, AI agents (Claude Code, Cursor, etc.) can invoke `chaitin-cli` commands to manage Chaitin security products directly.
+
+If you want an AI agent to call `chaitin-cli` automatically, install the Skill:
 
 ```bash
 npx skills add chaitin/chaitin-cli
@@ -20,8 +32,6 @@ After installation, simply describe your needs to the AI agent, for example:
 - "Show me recent attack logs in SafeLine"
 - "Create a scan task in X-Ray"
 - "List vulnerability events in CloudWalker"
-
-Skill will install the cli automatically
 
 ## Demo
 

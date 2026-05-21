@@ -9,9 +9,21 @@
 
 [English README](./README.en.md)
 
+## 快速开始
+
+macOS / Linux 可直接运行安装脚本：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chaitin/chaitin-cli/main/skills/chaitin-cli/scripts/install-chaitin-cli.sh | bash
+```
+
+Windows 用户请从 [GitHub Releases](https://github.com/chaitin/chaitin-cli/releases) 下载对应版本，解压 `chaitin-cli.exe` 并加入 PATH。
+
 ## Skill
 
 本项目提供了 skill，安装后 AI Agent（Claude Code、Cursor 等）可以直接调用 `chaitin-cli` 命令管理长亭安全产品。
+
+如果你希望 AI Agent 自动调用 `chaitin-cli`，可以安装 Skill：
 
 ```bash
 npx skills add chaitin/chaitin-cli
@@ -22,8 +34,6 @@ npx skills add chaitin/chaitin-cli
 - "帮我查看 SafeLine 最近的攻击日志"
 - "在 X-Ray 中创建一个扫描任务"
 - "列出 CloudWalker 中的漏洞事件"
-
-Skill 支持自动安装 cli
 
 ## 演示
 
