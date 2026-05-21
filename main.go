@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/chaitin/chaitin-cli/config"
+	"github.com/chaitin/chaitin-cli/products/apisec"
 	"github.com/chaitin/chaitin-cli/products/chaitin"
 	"github.com/chaitin/chaitin-cli/products/cloudwalker"
 	"github.com/chaitin/chaitin-cli/products/ddr"
@@ -46,6 +47,7 @@ func newApp() (*app, error) {
 	root.PersistentFlags().BoolVar(&a.dryRun, "dry-run", false, "Do not send requests for commands that support dry-run")
 
 	a.registerProductCommand(chaitin.NewCommand())
+	a.registerProductCommand(apisec.NewCommand())
 	a.registerProductCommand(safelinece.NewCommand())
 	a.registerProductCommand(cloudwalker.NewCommand())
 	a.registerProductCommand(ddr.NewCommand())
@@ -105,6 +107,8 @@ func (a *app) wrapProductCommand(cmd *cobra.Command) {
 		}
 
 		switch cmd.Name() {
+		case "apisec":
+			apisec.ApplyRuntimeConfig(command, a.config, a.dryRun)
 		case "safeline-ce":
 			safelinece.ApplyRuntimeConfig(command, a.config, a.dryRun)
 		case "cloudwalker":

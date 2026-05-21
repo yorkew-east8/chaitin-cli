@@ -390,11 +390,17 @@ func parseJSONBody(data []byte) (any, error) {
 }
 
 func getClient(cmd *cobra.Command) *Client {
-	return NewClient(&Config{}, false)
+	urlValue, _ := cmd.Flags().GetString("url")
+	apiToken, _ := cmd.Flags().GetString("api-token")
+	return NewClient(&Config{URL: urlValue, APIToken: apiToken}, verbose)
 }
 
 func getRenderer(cmd *cobra.Command) Renderer {
-	return NewRenderer(FormatJSON, cmd.OutOrStdout())
+	format := FormatJSON
+	if output, _ := cmd.Flags().GetString("output"); output == string(FormatTable) {
+		format = FormatTable
+	}
+	return NewRenderer(format, cmd.OutOrStdout())
 }
 
 func shouldSkipManagedParam(param Parameter) bool {
