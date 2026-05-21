@@ -140,6 +140,51 @@ func TestEmbeddedMappingCoversPriorityGroups(t *testing.T) {
 	}
 }
 
+func TestEmbeddedAssetListCommandsHideInternalScopes(t *testing.T) {
+	api, mapping, err := loadEmbeddedSchema()
+	if err != nil {
+		t.Fatalf("loadEmbeddedSchema() error = %v", err)
+	}
+	commands, err := NewParser(api, mapping).GenerateSemanticCommands()
+	if err != nil {
+		t.Fatalf("GenerateSemanticCommands() error = %v", err)
+	}
+
+	tests := []struct {
+		name       string
+		path       []string
+		wantScope  string
+		wantPhrase string
+	}{
+		{
+			name:       "site list",
+			path:       []string{"asset", "site", "list"},
+			wantScope:  "scope=inventory:site",
+			wantPhrase: "without passing the internal scope",
+		},
+		{
+			name:       "api list",
+			path:       []string{"asset", "api", "list"},
+			wantScope:  "scope=inventory:api",
+			wantPhrase: "without passing the internal scope",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := findCommandPath(commands, tt.path...)
+			if cmd == nil {
+				t.Fatalf("command path %v not generated", tt.path)
+			}
+			if !strings.Contains(cmd.Long, tt.wantScope) {
+				t.Fatalf("help missing default scope %q:\n%s", tt.wantScope, cmd.Long)
+			}
+			if !strings.Contains(cmd.Long, tt.wantPhrase) {
+				t.Fatalf("help missing user-facing guidance %q:\n%s", tt.wantPhrase, cmd.Long)
+			}
+		})
+	}
+}
+
 func loadMinimalOpenAPI(t *testing.T) *OpenAPI {
 	t.Helper()
 	data, err := os.ReadFile("testdata/openapi_minimal.json")

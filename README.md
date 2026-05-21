@@ -81,6 +81,7 @@ npx skills add chaitin/chaitin-cli
 | `cloudwalker` | CloudWalker CWPP 事件、资产、漏洞、防护策略和系统管理 |
 | `tanswer` | T-Answer 防火墙、白名单和阻断规则管理 |
 | `ddr` | DDR API Token 和连接配置辅助能力 |
+| `apisec` | APISec API 资产、站点、应用、访问者、数据安全和风险事件管理 |
 
 根命令负责配置加载、产品命令注册和 BusyBox 风格调用分发；各产品目录负责自己的命令、参数、配置解析和 API 调用逻辑。
 
@@ -106,6 +107,10 @@ ddr:
 xray:
   url: https://xray.example.com/api/v2
   api_key: YOUR_API_KEY
+
+apisec:
+  url: https://apisec.example.com
+  api_token: YOUR_API_TOKEN
 ```
 也可以把同样的配置放到环境变量或本地 `.env` 文件中。变量命名规则为 `<PRODUCT>_<FIELD>`：
 
@@ -119,11 +124,28 @@ ddr.api_key          -> DDR_API_KEY
 ddr.company_id       -> DDR_COMPANY_ID
 xray.url             -> XRAY_URL
 xray.api_key         -> XRAY_API_KEY
+apisec.url           -> APISEC_URL
+apisec.api_token     -> APISEC_API_TOKEN
 safeline-ce.url      -> SAFELINE_CE_URL
 safeline-ce.api_key  -> SAFELINE_CE_API_KEY
 safeline.url         -> SAFELINE_URL
 safeline.api_key     -> SAFELINE_API_KEY
 ```
+
+APISec 常用查询不需要手动传内部 `scope`，优先使用语义化命令：
+
+```bash
+# 查询站点资产
+chaitin-cli apisec asset site list --query count=100 --query offset=0 --output json
+
+# 查询 API 资产
+chaitin-cli apisec asset api list --query count=100 --query offset=0 --output json
+
+# 查询风险事件
+chaitin-cli apisec risk event list --query count=20 --query offset=0 --output json
+```
+
+`apisec raw` 保留为高级入口，用于调用生成出的底层 API 操作；日常查询建议先运行 `chaitin-cli apisec --help` 或对应语义命令的 `--help`。
 
 `.env` 示例：
 

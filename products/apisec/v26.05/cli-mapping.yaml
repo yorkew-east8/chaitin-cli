@@ -27,8 +27,13 @@ commands:
     short: Relocate sites between applications
 
   - path: [asset, site, list]
-    operationId: SiteAPI_get
-    short: List sites
+    operationId: FilterAPI_get
+    short: List site assets
+    long: List APISec site assets without passing the internal scope. The command sets scope=inventory:site by default; use --query count=100 --query offset=0 for pagination.
+    query:
+      scope: inventory:site
+    examples:
+      - chaitin-cli apisec asset site list --query count=100 --query offset=0 --output json
   - path: [asset, site, create]
     operationId: SiteAPI_post
     short: Create sites
@@ -52,8 +57,13 @@ commands:
     short: Enable or disable website discovery
 
   - path: [asset, api, list]
-    operationId: InterfaceAPI_get
+    operationId: FilterAPI_get
     short: List API assets
+    long: List APISec API assets without passing the internal scope. The command sets scope=inventory:api by default; use --query count=100 --query offset=0 for pagination and additional filters.
+    query:
+      scope: inventory:api
+    examples:
+      - chaitin-cli apisec asset api list --query count=100 --query offset=0 --output json
   - path: [asset, api, create]
     operationId: InterfaceAPI_post
     short: Create API assets

@@ -31,6 +31,12 @@ Command model:
   chaitin-cli apisec raw --help
     Exposes generated raw operations for all available APISec APIs.
 
+  chaitin-cli apisec asset site list --query count=100 --query offset=0 --output json
+    Lists APISec site assets without requiring internal FilterAPI scope names.
+
+  chaitin-cli apisec asset api list --query count=100 --query offset=0 --output json
+    Lists APISec API assets without requiring internal FilterAPI scope names.
+
   chaitin-cli apisec asset app --help
     Exposes mapped semantic commands for priority workflows.
 
