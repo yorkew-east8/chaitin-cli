@@ -17,11 +17,12 @@ import (
 
 // Global flags - these are set by the parent safeline command via SetFlags
 var (
-	URL      string
-	APIKey   string
-	Output   string
-	Insecure bool
-	DryRun   bool
+	URL           string
+	APIKey        string
+	Output        string
+	Insecure      bool
+	DryRun        bool
+	ServerVersion string // detected server version, empty if unknown
 )
 
 // SetFlags sets the global flags from the safeline package.
@@ -32,6 +33,16 @@ func SetFlags(url, apiKey, output string, insecure bool, dryRun bool) {
 	Output = output
 	Insecure = insecure
 	DryRun = dryRun
+}
+
+// SetServerVersion sets the detected server version for subcommand use.
+func SetServerVersion(v string) {
+	ServerVersion = v
+}
+
+// GetServerVersion returns the detected server version (empty if unknown).
+func GetServerVersion() string {
+	return ServerVersion
 }
 
 // NewClient creates an authenticated Skyview client.

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/chaitin/chaitin-cli/products/safeline/cmd"
+	"github.com/chaitin/chaitin-cli/products/safeline/version"
 	"github.com/spf13/cobra"
 )
 
@@ -73,6 +74,13 @@ Examples:
 				"count":        fmt.Sprintf("%d", count),
 			}
 
+			// Filter params based on server version
+			svrVer := cmd.GetServerVersion()
+			query = version.FilterParams("log/detect/list", query, svrVer)
+
+			// Build fallback query (strip version-sensitive params)
+			fallbackQuery := version.StripFallbackParams("log/detect/list", query)
+
 			var multiQuery map[string][]string
 			if tailSort != "" {
 				values, err := parseSortValues(tailSort)
@@ -92,7 +100,7 @@ Examples:
 				multiQuery["head_sort"] = values
 			}
 
-			env, err := cl.DoMulti("GET", "/api/FilterV2API", nil, query, multiQuery)
+			env, err := cl.DoMultiWithFallback("GET", "/api/FilterV2API", nil, query, multiQuery, fallbackQuery, nil)
 			if err != nil {
 				return err
 			}
@@ -293,6 +301,13 @@ Examples:
 				"count":        fmt.Sprintf("%d", count),
 			}
 
+			// Filter params based on server version
+			svrVer := cmd.GetServerVersion()
+			query = version.FilterParams("log/access/list", query, svrVer)
+
+			// Build fallback query (strip version-sensitive params)
+			fallbackQuery := version.StripFallbackParams("log/access/list", query)
+
 			var multiQuery map[string][]string
 			if tailSort != "" {
 				values, err := parseSortValues(tailSort)
@@ -312,7 +327,7 @@ Examples:
 				multiQuery["head_sort"] = values
 			}
 
-			env, err := cl.DoMulti("GET", "/api/FilterV2API", nil, query, multiQuery)
+			env, err := cl.DoMultiWithFallback("GET", "/api/FilterV2API", nil, query, multiQuery, fallbackQuery, nil)
 			if err != nil {
 				return err
 			}

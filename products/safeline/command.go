@@ -21,6 +21,7 @@ import (
 	"github.com/chaitin/chaitin-cli/products/safeline/cmd/system"
 	"github.com/chaitin/chaitin-cli/products/safeline/pkg/auth"
 	"github.com/chaitin/chaitin-cli/products/safeline/pkg/client"
+	"github.com/chaitin/chaitin-cli/products/safeline/version"
 	"github.com/spf13/cobra"
 )
 
@@ -72,6 +73,9 @@ func NewCommand() *cobra.Command {
 			}
 			cmdpkg.SetFlags(url, apiKey, output, insecure, dryRun)
 
+			// Detect server version (non-blocking, failures are silent)
+			detectServerVersion()
+
 			return nil
 		},
 	}
@@ -83,6 +87,44 @@ func NewCommand() *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&insecure, "insecure", true, "Skip TLS certificate verification")
 
 	return cmd
+}
+
+// detectServerVersion attempts to detect and cache the server version.
+// Failures are silent — version-aware features will use fallback instead.
+func detectServerVersion() {
+	cachePath := version.DefaultCachePath()
+
+	// Try loading from cache first
+	if cachePath != "" {
+		entry, err := version.LoadCachedVersion(cachePath, url)
+		if err == nil && entry.Version != "" {
+			cmdpkg.SetServerVersion(entry.Version)
+			return
+		}
+	}
+
+	// Query the server
+	transport := &auth.Transport{Token: apiKey}
+	httpClient := &http.Client{Transport: transport}
+	if insecure {
+		httpClient.Transport = &auth.Transport{
+			Base:  &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+			Token: apiKey,
+		}
+	}
+
+	v, err := version.GetServerVersionFromAPI(url, httpClient)
+	if err != nil {
+		// Silent failure — version detection is best-effort
+		return
+	}
+
+	cmdpkg.SetServerVersion(v)
+
+	// Cache the result
+	if cachePath != "" {
+		_ = version.CacheVersion(cachePath, url, v)
+	}
 }
 
 // RegisterModules adds all API module commands to the safeline root command.
