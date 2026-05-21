@@ -9,6 +9,16 @@
 
 [English README](./README.en.md)
 
+## 项目简介
+
+`chaitin-cli` 是面向长亭安全产品的统一命令行工具，目标是在一个二进制中提供多产品的常用运维、查询和自动化能力。它解决了不同产品 API、认证方式和输出格式分散的问题，让开发者、运维人员和 AI Agent 可以用一致的方式管理 SafeLine、X-Ray、CloudWalker、T-Answer、DDR 等产品。
+
+核心能力：
+
+- 统一入口：通过 `chaitin-cli <product> <command>` 调用不同产品能力
+- 配置复用：支持配置文件、环境变量、`.env` 和命令行参数
+- 自动化友好：提供 dry-run、JSON 输出和 AI Skill，便于脚本和 Agent 集成
+
 ## 快速开始
 
 macOS / Linux 可直接运行安装脚本：
@@ -59,6 +69,20 @@ npx skills add chaitin/chaitin-cli
 ### X-Ray
 
 [![asciicast](https://asciinema.org/a/923077.svg)](https://asciinema.org/a/923077)
+
+## 功能模块
+
+| 模块 | 说明 |
+| --- | --- |
+| `chaitin` | 示例和基础命令 |
+| `safeline` | SafeLine WAF 站点、策略、ACL、攻击日志和系统信息管理 |
+| `safeline-ce` | SafeLine CE 站点、规则、日志、证书和增强防护管理 |
+| `xray` | X-Ray 扫描任务、资产、漏洞、报告和系统配置管理 |
+| `cloudwalker` | CloudWalker CWPP 事件、资产、漏洞、防护策略和系统管理 |
+| `tanswer` | T-Answer 防火墙、白名单和阻断规则管理 |
+| `ddr` | DDR API Token 和连接配置辅助能力 |
+
+根命令负责配置加载、产品命令注册和 BusyBox 风格调用分发；各产品目录负责自己的命令、参数、配置解析和 API 调用逻辑。
 
 ## 配置
 
@@ -128,9 +152,15 @@ chaitin-cli --dry-run xray plan PostPlanFilter --filterPlan.limit=10
 ## 项目结构
 
 ```text
-main.go                # 主入口和 CLI 装配逻辑
-products/<name>/       # 每个产品一个独立目录
-Taskfile.yml           # 构建、运行、检查任务
+main.go                         # 主入口、根命令、产品注册和 BusyBox 风格调用
+config/                         # 配置加载、环境变量/.env 覆盖和配置写入逻辑
+products/<name>/                # 每个产品一个独立目录，包含命令和 API 客户端
+products/<name>/cmd/            # 手写产品命令分组
+products/<name>/client/         # 生成或封装的产品 API 客户端
+skills/chaitin-cli/             # AI Agent Skill 和自动安装脚本
+cmd/gen-cli/                    # CLI 生成工具
+Taskfile.yml                    # 构建、运行、检查和打包任务
+.github/workflows/ci.yml        # CI、跨平台打包和 GitHub Release 发布流程
 ```
 
 ## 添加新产品
@@ -163,6 +193,25 @@ ln -s ./bin/chaitin-cli ./chaitin
 
 ## 开发
 
+仓库地址：
+
+```bash
+git clone https://github.com/chaitin/chaitin-cli.git
+cd chaitin-cli
+```
+
+环境准备：
+
+- Go 版本以 [`go.mod`](./go.mod) 为准
+- 安装 [Task](https://taskfile.dev/) 后可使用 `task` 命令
+
+本地运行：
+
+```bash
+go run . chaitin
+go run . safeline --help
+```
+
 常用任务:
 
 ```bash
@@ -173,3 +222,30 @@ task lint
 task test
 task package GOOS=linux GOARCH=amd64
 ```
+
+## 维护与反馈
+
+- 主线分支：[`main`](https://github.com/chaitin/chaitin-cli/tree/main)
+- 版本发布：通过 [`GitHub Releases`](https://github.com/chaitin/chaitin-cli/releases) 提供跨平台安装包
+- 发布流程：推送 `v*` tag 后由 GitHub Actions 自动测试、打包并创建 Release
+- 维护状态：当前持续维护，欢迎通过 PR 贡献产品命令、文档和 bugfix
+
+需求建议和 Bug 反馈请通过 [GitHub Issues](https://github.com/chaitin/chaitin-cli/issues) 提交。提交前请先搜索已有 Issue，避免重复反馈。请勿在公开 Issue 中粘贴 API Key、Token、真实业务地址或其他敏感信息。
+
+## FAQ
+
+**安装后找不到 `chaitin-cli` 怎么办？**
+
+确认安装目录是否在 `PATH` 中。macOS / Linux 安装脚本会优先安装到用户或系统 PATH 目录；如果当前 shell 未刷新，可以重新打开终端或使用脚本输出的完整路径运行。
+
+**配置从哪里读取？**
+
+优先级为 `flags > environment/.env > config.yaml`。根命令的 `-c` / `--config` 可以指定其他配置文件。
+
+**自签名证书连接失败怎么办？**
+
+部分产品命令提供 `--insecure` 参数，SafeLine 默认跳过 TLS 证书校验；不同产品行为可能不同，可先运行对应产品命令的 `--help` 查看支持的参数。
+
+**如何发布新版本？**
+
+在 `main` 上创建并推送 `v*` tag，例如 `v2605.0.0`，GitHub Actions 会自动构建跨平台包并发布到 Releases。
