@@ -2,6 +2,7 @@ package apisec
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -31,7 +32,28 @@ func TestNewCommand(t *testing.T) {
 	}
 }
 
+func TestScopesCommandHonorsJSONOutput(t *testing.T) {
+	cmd := NewCommand()
+	cmd.SetArgs([]string{"--output", "json", "scopes"})
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	var scopes []map[string]string
+	if err := json.Unmarshal(out.Bytes(), &scopes); err != nil {
+		t.Fatalf("scopes output is not JSON: %v\n%s", err, out.String())
+	}
+	if len(scopes) == 0 || scopes[0]["scope"] == "" {
+		t.Fatalf("scopes output = %#v, want scope objects", scopes)
+	}
+}
+
 func TestApplyRuntimeConfig(t *testing.T) {
+	oldDryRun := dryRun
+	t.Cleanup(func() { dryRun = oldDryRun })
+
 	cmd := NewCommand()
 	cfg := config.Raw{}
 	var node yaml.Node

@@ -44,7 +44,7 @@ func newApp() (*app, error) {
 	}
 
 	root.PersistentFlags().StringVarP(&a.configPath, "config", "c", a.configPath, "Config file path")
-	root.PersistentFlags().BoolVar(&a.dryRun, "dry-run", false, "Do not send requests for commands that support dry-run")
+	root.PersistentFlags().BoolVar(&a.dryRun, "dry-run", false, "Do not send requests; commands that support dry-run print a request summary")
 
 	a.registerProductCommand(chaitin.NewCommand())
 	a.registerProductCommand(apisec.NewCommand())

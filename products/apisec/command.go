@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	runtimeCfg Config
-	verbose    bool
+	runtimeCfg       Config
+	verbose          bool
+	verboseSensitive bool
 )
 
 func NewCommand() *cobra.Command {
@@ -51,12 +52,32 @@ Operation help includes endpoint and operation ID so AI agents can map commands 
 	cmd.PersistentFlags().String("api-token", "", "APISec API token sent as API-TOKEN header")
 	cmd.PersistentFlags().StringP("output", "o", "json", "Output format (table|json)")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Print request URL, headers, and body")
+	cmd.PersistentFlags().BoolVar(&verboseSensitive, "verbose-sensitive", false, "Print sensitive values such as API tokens in verbose output")
 
 	if err := loadDynamicCommands(cmd); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
 	}
+	cmd.AddCommand(newScopesCommand())
 
 	return cmd
+}
+
+func newScopesCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "scopes",
+		Short: "List common APISec FilterAPI scopes",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			scopes := []map[string]string{
+				{"scope": "inventory:app", "description": "application assets"},
+				{"scope": "inventory:site", "description": "site assets"},
+				{"scope": "inventory:api", "description": "API assets"},
+				{"scope": "inventory:detect:split", "description": "predicate split rules"},
+				{"scope": "risk:detect:strategy", "description": "risk discovery strategies"},
+				{"scope": "risk:risk_event", "description": "risk event groups"},
+			}
+			return getRenderer(cmd).Render(scopes)
+		},
+	}
 }
 
 func ApplyRuntimeConfig(cmd *cobra.Command, cfg config.Raw, isDryRun bool) {

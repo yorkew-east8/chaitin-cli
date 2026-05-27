@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"os"
 	"strings"
@@ -162,7 +163,11 @@ func valueString(value any) string {
 func logRequest(req *http.Request, body any) {
 	fmt.Fprintf(os.Stderr, "URL: %s %s\n", req.Method, req.URL.String())
 	if len(req.Header) > 0 {
-		data, err := json.MarshalIndent(req.Header, "", "  ")
+		headers := req.Header.Clone()
+		if !verboseSensitive {
+			maskHeader(headers, "API-TOKEN")
+		}
+		data, err := json.MarshalIndent(headers, "", "  ")
 		if err == nil {
 			fmt.Fprintf(os.Stderr, "Headers:\n%s\n", string(data))
 		}
@@ -175,4 +180,27 @@ func logRequest(req *http.Request, body any) {
 		}
 		fmt.Fprintf(os.Stderr, "Body: %v\n", body)
 	}
+}
+
+func maskHeader(headers http.Header, name string) {
+	name = textproto.CanonicalMIMEHeaderKey(name)
+	values, ok := headers[name]
+	if !ok {
+		return
+	}
+	masked := make([]string, 0, len(values))
+	for _, value := range values {
+		masked = append(masked, maskSecret(value))
+	}
+	headers[name] = masked
+}
+
+func maskSecret(value string) string {
+	if value == "" {
+		return ""
+	}
+	if len(value) <= 8 {
+		return "***"
+	}
+	return value[:4] + "..." + value[len(value)-4:]
 }

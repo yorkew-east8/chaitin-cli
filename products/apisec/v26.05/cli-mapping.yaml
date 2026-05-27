@@ -1,10 +1,12 @@
 commands:
   - path: [asset, app, list]
-    operationId: ApplicationAPI_get
+    operationId: FilterAPI_get
     short: List applications
-    long: List APISec applications. Operation help keeps the API operation ID for precise automation.
+    long: List APISec applications without passing the internal scope. The command sets scope=inventory:app by default; use --query count=100 --query offset=0 for pagination.
+    query:
+      scope: inventory:app
     examples:
-      - chaitin-cli apisec asset app list --output json
+      - chaitin-cli apisec asset app list --query count=100 --query offset=0 --output json
   - path: [asset, app, create]
     operationId: ApplicationAPI_post
     short: Create application
@@ -95,6 +97,51 @@ commands:
     operationId: InterfaceSlimAPI_get
     short: List slim API asset records
 
+  - path: [asset, split, list]
+    operationId: SplitConfigAPI_get
+    short: List predicate split rules
+    long: List APISec predicate split rules. Use --page and --page-size; this endpoint does not use count/offset pagination.
+    aliases:
+      - 谓词拆分规则
+    examples:
+      - chaitin-cli apisec asset split list --page 1 --page-size 10 --output json
+  - path: [asset, split, create]
+    operationId: SplitConfigAPI_post
+    short: Create predicate split rule
+    long: Create an APISec predicate split rule.
+    aliases:
+      - 谓词拆分规则
+    enumHints:
+      origin:
+        - value: "1"
+          label: query
+        - value: "4"
+          label: body
+    bodyExample:
+      is_enabled: false
+      name: 按 user_id 拆分
+      original_api_id: "<api_uuid>"
+      origin: "1"
+      key: user_id
+    rollback:
+      description: Delete the created predicate split rule by UUID after creation.
+      command: chaitin-cli apisec raw filter-api delete --body '{"scope":"inventory:detect:split","id__in":["<created_id>"]}' --yes
+    examples:
+      - chaitin-cli apisec asset split create --api-id a-xxx --origin query --key user_id --name "按 user_id 拆分" --disabled
+  - path: [asset, split, enable]
+    operationId: SplitConfigAPI_put
+    short: Enable predicate split rule
+  - path: [asset, split, disable]
+    operationId: SplitConfigAPI_put
+    short: Disable predicate split rule
+  - path: [asset, split, delete]
+    operationId: FilterAPI_delete
+    short: Delete predicate split rules
+    bodyExample:
+      scope: inventory:detect:split
+      id__in:
+        - "<split_uuid>"
+
   - path: [asset, visitor, query]
     operationId: UserSrcIpInfoQueryAPI_get
     short: Query visitor source IP information
@@ -179,6 +226,32 @@ commands:
   - path: [risk, config, create-strategy]
     operationId: RiskStrategyAPI_post
     short: Create risk discovery strategy
+    enumHints:
+      effective_scope:
+        - value: "1"
+          label: api
+        - value: "2"
+          label: site
+        - value: "3"
+          label: app
+        - value: "4"
+          label: global
+      type:
+        - value: "55"
+          label: 账号滥用 IP
+    bodyExample:
+      effective_scope: "2"
+      uuids:
+        - "<site_uuid>"
+      name: 账号滥用 IP
+      type: "55"
+      pattern:
+        detection_cycle: 2
+        src_ip_dis_cnt: 10
+        business_tag: []
+    rollback:
+      description: Delete the created risk strategy after creation.
+      command: chaitin-cli apisec raw filter-api delete --body '{"scope":"risk:detect:strategy","id__in":["<created_id>"]}' --yes
   - path: [risk, config, update-strategy]
     operationId: RiskStrategyAPI_put
     short: Update risk discovery strategy
@@ -209,6 +282,52 @@ commands:
   - path: [risk, config, auxiliary-info]
     operationId: RiskStrategyAuxiliaryInfoAPI_get
     short: Get risk strategy auxiliary info
+
+  - path: [risk, strategy, list]
+    operationId: FilterAPI_get
+    short: List risk strategies
+    long: List risk discovery strategies through APISec FilterAPI. The default query sets scope=risk:detect:strategy.
+    query:
+      scope: risk:detect:strategy
+    examples:
+      - chaitin-cli apisec risk strategy list --query count=20 --query offset=0 --output json
+  - path: [risk, strategy, create-account-abuse-ip]
+    operationId: RiskStrategyAPI_post
+    short: Create account abuse IP risk strategy
+    long: Create an account abuse IP risk strategy. This command can be called with --body/--body-file or the dedicated flags documented below.
+    aliases:
+      - 账号滥用 IP
+    enumHints:
+      effective_scope:
+        - value: "1"
+          label: api
+        - value: "2"
+          label: site
+        - value: "3"
+          label: app
+        - value: "4"
+          label: global
+      type:
+        - value: "55"
+          label: 账号滥用 IP
+    bodyExample:
+      effective_scope: "2"
+      uuids:
+        - "<site_uuid>"
+      name: 账号滥用 IP
+      type: "55"
+      pattern:
+        detection_cycle: 2
+        src_ip_dis_cnt: 10
+        business_tag: []
+    rollback:
+      description: Delete the created account abuse IP risk strategy after creation.
+      command: chaitin-cli apisec raw filter-api delete --body '{"scope":"risk:detect:strategy","id__in":["<created_id>"]}' --yes
+    examples:
+      - chaitin-cli apisec risk strategy create-account-abuse-ip --scope site --uuid s-xxx --src-ip-dis-cnt 10 --detection-cycle 2
+  - path: [risk, strategy, update]
+    operationId: RiskStrategyAPI_put
+    short: Update risk strategy
 
   - path: [risk, event, list]
     operationId: FilterAPI_get

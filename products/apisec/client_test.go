@@ -3,9 +3,11 @@ package apisec
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 )
@@ -70,4 +72,46 @@ func TestClientReturnsAPIError(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "bad-request") {
 		t.Fatalf("Do() error = %v, want bad-request", err)
 	}
+}
+
+func TestDryRunMasksAPIToken(t *testing.T) {
+	oldDryRun := dryRun
+	oldVerboseSensitive := verboseSensitive
+	dryRun = true
+	verboseSensitive = false
+	t.Cleanup(func() {
+		dryRun = oldDryRun
+		verboseSensitive = oldVerboseSensitive
+	})
+
+	stderr := captureStderr(t, func() {
+		client := NewClient(&Config{URL: "https://apisec.example", APIToken: "HJn812345678a4cb"}, false)
+		var result any
+		_ = client.Do(context.Background(), http.MethodPost, "/api/RiskStrategyAPI", nil, map[string]any{"name": "x"}, &result)
+	})
+
+	if strings.Contains(stderr, "HJn812345678a4cb") {
+		t.Fatalf("dry-run output leaked full token:\n%s", stderr)
+	}
+	if !strings.Contains(stderr, "HJn8...a4cb") {
+		t.Fatalf("dry-run output missing masked token:\n%s", stderr)
+	}
+}
+
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	old := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Pipe() error = %v", err)
+	}
+	os.Stderr = w
+	fn()
+	_ = w.Close()
+	os.Stderr = old
+	data, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("ReadAll() error = %v", err)
+	}
+	return string(data)
 }

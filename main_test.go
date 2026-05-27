@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -14,6 +15,20 @@ func TestNewAppUsesDefaultConfigPath(t *testing.T) {
 
 	if app.configPath != defaultConfigPathFromCWD() {
 		t.Fatalf("app.configPath = %q, want %q", app.configPath, defaultConfigPathFromCWD())
+	}
+}
+
+func TestDryRunHelpMentionsRequestSummary(t *testing.T) {
+	app, err := newApp()
+	if err != nil {
+		t.Fatalf("newApp() error = %v", err)
+	}
+	flag := app.root.PersistentFlags().Lookup("dry-run")
+	if flag == nil {
+		t.Fatalf("missing --dry-run flag")
+	}
+	if !strings.Contains(flag.Usage, "request summary") {
+		t.Fatalf("dry-run usage = %q, want request summary mention", flag.Usage)
 	}
 }
 

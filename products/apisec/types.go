@@ -81,9 +81,23 @@ type MappedCommand struct {
 	Long        string                 `yaml:"long,omitempty"`
 	Examples    []string               `yaml:"examples,omitempty"`
 	Query       map[string]string      `yaml:"query,omitempty"`
+	EnumHints   map[string][]EnumHint  `yaml:"enumHints,omitempty"`
+	BodyExample map[string]interface{} `yaml:"bodyExample,omitempty"`
+	Aliases     []string               `yaml:"aliases,omitempty"`
+	Rollback    *RollbackHint          `yaml:"rollback,omitempty"`
 	RawHidden   bool                   `yaml:"rawHidden,omitempty"`
 	Flags       map[string]MappedFlag  `yaml:"flags,omitempty"`
 	Metadata    map[string]interface{} `yaml:"metadata,omitempty"`
+}
+
+type EnumHint struct {
+	Value string `yaml:"value"`
+	Label string `yaml:"label"`
+}
+
+type RollbackHint struct {
+	Description string `yaml:"description,omitempty"`
+	Command     string `yaml:"command,omitempty"`
 }
 
 type MappedFlag struct {
