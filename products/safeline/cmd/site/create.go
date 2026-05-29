@@ -53,9 +53,14 @@ func newCreateCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("marshal site create payload: %w", err)
 			}
-			env, err := safelinecmd.NewClient().Do("POST", ctx.Endpoint, bytes.NewReader(body), nil)
+			cl := safelinecmd.NewClient()
+			env, err := cl.Do("POST", ctx.Endpoint, bytes.NewReader(body), nil)
 			if err != nil {
-				return err
+				var recovered bool
+				env, warnings, recovered, err = recoverCreateFileStorageError(cl, ctx.Endpoint, payload, env, err, warnings)
+				if !recovered {
+					return err
+				}
 			}
 			return safelinecmd.PrintResult(c, map[string]any{"ok": true, "operation": "site.create", "warnings": warnings, "errors": []string{}, "data": map[string]any{"endpoint": ctx.Endpoint, "response": env.Data, "rollback": "safeline site delete <id> --yes"}})
 		},

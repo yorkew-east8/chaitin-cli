@@ -35,6 +35,7 @@ func newDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			ids := payload["id__in"].([]int)
 			preview := map[string]any{"ok": true, "operation": "site.delete.check", "warnings": ctx.Warnings, "errors": []string{}, "data": map[string]any{"endpoint": ctx.Endpoint, "payload": payload}}
 			if check || safelinecmd.IsDryRun() {
 				return safelinecmd.PrintResult(c, preview)
@@ -46,9 +47,14 @@ func newDeleteCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("marshal site delete payload: %w", err)
 			}
-			env, err := safelinecmd.NewClient().Do("DELETE", ctx.Endpoint, bytes.NewReader(body), nil)
+			cl := safelinecmd.NewClient()
+			env, err := cl.Do("DELETE", ctx.Endpoint, bytes.NewReader(body), nil)
 			if err != nil {
-				return err
+				var recovered bool
+				env, ctx.Warnings, recovered, err = recoverDeleteFileStorageError(cl, ctx.Endpoint, ids[0], env, err, ctx.Warnings)
+				if !recovered {
+					return err
+				}
 			}
 			return safelinecmd.PrintResult(c, map[string]any{"ok": true, "operation": "site.delete", "warnings": ctx.Warnings, "errors": []string{}, "data": map[string]any{"endpoint": ctx.Endpoint, "response": env.Data}})
 		},
