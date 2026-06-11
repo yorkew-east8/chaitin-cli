@@ -81,6 +81,7 @@ After installation, simply describe your needs to the AI agent, for example:
 | `tanswer` | T-Answer firewall, whitelist, and block rule management |
 | `ddr` | DDR API token and connection configuration helpers |
 | `dsensor` | D-Sensor security monitoring, agent, honeypot, alarm, and threat log management |
+| `codeinsight` | CodeInsight project, repository configuration, scan task, and report export management |
 
 The root command handles configuration loading, product command registration, and BusyBox-style dispatch. Each product directory owns its commands, flags, configuration decoding, and API calls.
 
@@ -110,6 +111,10 @@ xray:
 dsensor:
   url: https://dsensor.example.com
   api_key: YOUR_API_KEY
+
+codeinsight:
+  url: https://codeinsight.example.com
+  access_token: YOUR_ACCESS_TOKEN
 ```
 You can also put the same keys into environment variables or a local `.env` file. Variable names follow `<PRODUCT>_<FIELD>`:
 
@@ -125,6 +130,8 @@ xray.url             -> XRAY_URL
 xray.api_key         -> XRAY_API_KEY
 dsensor.url          -> DSENSOR_URL
 dsensor.api_key      -> DSENSOR_API_KEY
+codeinsight.url      -> CODEINSIGHT_URL
+codeinsight.access_token -> CODEINSIGHT_ACCESS_TOKEN or CODEINSIGHT_TOKEN
 safeline-ce.url      -> SAFELINE_CE_URL
 safeline-ce.api_key  -> SAFELINE_CE_API_KEY
 safeline.url         -> SAFELINE_URL
@@ -153,6 +160,19 @@ Use root-level `--dry-run` for commands that support dry-run:
 
 ```bash
 chaitin-cli --dry-run xray plan PostPlanFilter --filterPlan.limit=10
+```
+
+### CodeInsight Projects And Tasks
+
+```bash
+export CODEINSIGHT_URL=https://codeinsight.example.com
+export CODEINSIGHT_TOKEN=YOUR_ACCESS_TOKEN
+
+chaitin-cli codeinsight project create --name demo-java --language java
+chaitin-cli codeinsight repo-config create --name git-prod --repo-type git --git-provider gitlab --server-host https://git.example.com/group/demo.git --auth-type access_token --access-token GIT_TOKEN
+chaitin-cli codeinsight task create repo --project-name demo-java --task-name demo-repo --rule-set-name Corax-Java --repo-config-name git-prod --ref-type branch --ref-name main
+chaitin-cli codeinsight task result --task-id 12345
+chaitin-cli codeinsight task result download --task-id 12345 --out ./reports/12345.json
 ```
 
 ## Project Structure

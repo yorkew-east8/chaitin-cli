@@ -1,14 +1,14 @@
 ---
 name: chaitin-cli
-description: "Use when running chaitin-cli commands to manage Chaitin security products: SafeLine WAF (site management, IP blocking, ACL, policy rules, attack logs), X-Ray vulnerability scanner (scan tasks, results, assets), CloudWalker CWPP (events, vulnerabilities, assets), and T-Answer (firewall rules, blocklists)."
+description: "Use when running chaitin-cli commands to manage Chaitin security products: SafeLine WAF (site management, IP blocking, ACL, policy rules, attack logs), X-Ray vulnerability scanner (scan tasks, results, assets), CodeInsight (projects, repository configs, scan tasks, reports), CloudWalker CWPP (events, vulnerabilities, assets), and T-Answer (firewall rules, blocklists)."
 version: 1.0.0
 author: chaitin
-tags: [chaitin-cli, safeline, xray, cloudwalker, tanswer, waf, security, chaitin, cli]
+tags: [chaitin-cli, safeline, xray, codeinsight, cloudwalker, tanswer, waf, security, chaitin, cli]
 ---
 
 # chaitin-cli Usage Guide
 
-> Unified CLI for Chaitin security products. Manage SafeLine WAF, X-Ray scanner, CloudWalker CWPP, and T-Answer through a single tool.
+> Unified CLI for Chaitin security products. Manage SafeLine WAF, X-Ray scanner, CodeInsight, CloudWalker CWPP, and T-Answer through a single tool.
 
 ## No-Argument Behavior
 
@@ -20,7 +20,7 @@ When `/chaitin-cli` is invoked without any arguments (empty `ARGUMENTS`):
 4. If not found, install it per platform:
    - Windows: Tell the user to manually download the latest release from `https://github.com/chaitin/chaitin-cli/releases`, extract `chaitin-cli.exe`, and add it to PATH. Do not attempt automated installation on Windows.
    - macOS, Linux: Run `bash scripts/install-chaitin-cli.sh`. The script outputs the installed binary path on stdout (last line). Remember this path — subsequent commands must use the full path (e.g. `/home/user/.local/bin/chaitin-cli`) because each Bash invocation starts a new shell and the install directory may not yet be in PATH.
-5. After the setup check, briefly tell the user what they can do next — for example: "You can now use chaitin-cli to manage SafeLine, X-Ray, CloudWalker, or T-Answer. Tell me what you'd like to do, or run `chaitin-cli --help` to explore commands."
+5. After the setup check, briefly tell the user what they can do next — for example: "You can now use chaitin-cli to manage SafeLine, X-Ray, CodeInsight, CloudWalker, or T-Answer. Tell me what you'd like to do, or run `chaitin-cli --help` to explore commands."
 
 ## Tool Resolution
 
@@ -89,6 +89,10 @@ cloudwalker:
 tanswer:
   url: https://your-tanswer-server
   api_key: YOUR_API_KEY
+
+codeinsight:
+  url: https://your-codeinsight-server
+  access_token: YOUR_ACCESS_TOKEN
 ```
 
 Or use environment variables / `.env` file:
@@ -98,6 +102,8 @@ SAFELINE_URL=https://your-safeline-server
 SAFELINE_API_KEY=YOUR_API_KEY
 XRAY_URL=https://your-xray-server/api/v2
 XRAY_API_KEY=YOUR_API_KEY
+CODEINSIGHT_URL=https://your-codeinsight-server
+CODEINSIGHT_TOKEN=YOUR_ACCESS_TOKEN
 ```
 
 Priority: `flags > environment/.env > config.yaml`
@@ -130,7 +136,7 @@ chaitin-cli <product> <group> <cmd> --help  # List flags for a specific command
 
 ### Operating Rules
 
-For SafeLine, X-Ray, CloudWalker, T-Answer, and SafeLine-CE tasks, treat `chaitin-cli` as the only supported operator interface.
+For SafeLine, X-Ray, CodeInsight, CloudWalker, T-Answer, and SafeLine-CE tasks, treat `chaitin-cli` as the only supported operator interface.
 
 - Prefer `chaitin-cli ... --help` and existing `chaitin-cli` subcommands over `curl`, ad-hoc HTTP requests, browser debugging, or guessed endpoints.
 - If `chaitin-cli` does not expose the requested product operation, stop and say that the current CLI does not support it. Do not fall back to direct API calls just to "try it".
@@ -167,6 +173,7 @@ Pick by task, not by product name. Items are listed most- to least-common.
 | Enable detection modules (SQLi, XSS, …) | `safeline policy-group` · `safeline-ce module` · `safeline-ce skynet` |
 | Launch / stop a vulnerability scan | `xray plan` |
 | Query scan results, vulns, generate reports | `xray result` · `xray vulnerability` · `xray report` |
+| Manage CodeInsight projects and scan tasks | `codeinsight project` · `codeinsight task` · `codeinsight repo-config` |
 | Asset inventory (web / domain / IP) | `xray web_asset` · `xray domain_asset` · `xray ip_asset` |
 | Baseline / compliance check | `xray baseline` · `cloudwalker baseline_v2` |
 | Host-level event response (webshell, reverse shell, brute force) | `cloudwalker webshell_event` · `cloudwalker revshell_event` · `cloudwalker brute_force` |

@@ -83,6 +83,7 @@ npx skills add chaitin/chaitin-cli
 | `ddr` | DDR API Token 和连接配置辅助能力 |
 | `apisec` | APISec API 资产、站点、应用、访问者、数据安全和风险事件管理 |
 | `dsensor` | D-Sensor 谛听安全监控、探针、蜜罐、告警和威胁日志管理 |
+| `codeinsight` | CodeInsight 项目、代码托管配置、扫描任务和报告导出管理 |
 
 根命令负责配置加载、产品命令注册和 BusyBox 风格调用分发；各产品目录负责自己的命令、参数、配置解析和 API 调用逻辑。
 
@@ -116,6 +117,10 @@ apisec:
 dsensor:
   url: https://dsensor.example.com
   api_key: YOUR_API_KEY
+
+codeinsight:
+  url: https://codeinsight.example.com
+  access_token: YOUR_ACCESS_TOKEN
 ```
 也可以把同样的配置放到环境变量或本地 `.env` 文件中。变量命名规则为 `<PRODUCT>_<FIELD>`：
 
@@ -133,6 +138,8 @@ apisec.url           -> APISEC_URL
 apisec.api_token     -> APISEC_API_TOKEN
 dsensor.url          -> DSENSOR_URL
 dsensor.api_key      -> DSENSOR_API_KEY
+codeinsight.url      -> CODEINSIGHT_URL
+codeinsight.access_token -> CODEINSIGHT_ACCESS_TOKEN 或 CODEINSIGHT_TOKEN
 safeline-ce.url      -> SAFELINE_CE_URL
 safeline-ce.api_key  -> SAFELINE_CE_API_KEY
 safeline.url         -> SAFELINE_URL
@@ -196,6 +203,19 @@ chaitin-cli -c ./configs/safeline-staging.yaml safeline stats overview
 
 ```bash
 chaitin-cli --dry-run xray plan PostPlanFilter --filterPlan.limit=10
+```
+
+### CodeInsight 项目与任务
+
+```bash
+export CODEINSIGHT_URL=https://codeinsight.example.com
+export CODEINSIGHT_TOKEN=YOUR_ACCESS_TOKEN
+
+chaitin-cli codeinsight project create --name demo-java --language java
+chaitin-cli codeinsight repo-config create --name git-prod --repo-type git --git-provider gitlab --server-host https://git.example.com/group/demo.git --auth-type access_token --access-token GIT_TOKEN
+chaitin-cli codeinsight task create repo --project-name demo-java --task-name demo-repo --rule-set-name Corax-Java --repo-config-name git-prod --ref-type branch --ref-name main
+chaitin-cli codeinsight task result --task-id 12345
+chaitin-cli codeinsight task result download --task-id 12345 --out ./reports/12345.json
 ```
 
 ## 项目结构

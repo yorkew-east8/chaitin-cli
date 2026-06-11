@@ -10,6 +10,7 @@ import (
 	"github.com/chaitin/chaitin-cli/products/apisec"
 	"github.com/chaitin/chaitin-cli/products/chaitin"
 	"github.com/chaitin/chaitin-cli/products/cloudwalker"
+	"github.com/chaitin/chaitin-cli/products/codeinsight"
 	"github.com/chaitin/chaitin-cli/products/ddr"
 	"github.com/chaitin/chaitin-cli/products/dsensor"
 	"github.com/chaitin/chaitin-cli/products/safeline"
@@ -51,6 +52,7 @@ func newApp() (*app, error) {
 	a.registerProductCommand(apisec.NewCommand())
 	a.registerProductCommand(safelinece.NewCommand())
 	a.registerProductCommand(cloudwalker.NewCommand())
+	a.registerProductCommand(codeinsight.NewCommand())
 	a.registerProductCommand(ddr.NewCommand())
 	a.registerProductCommand(dsensor.NewCommand())
 	a.registerProductCommand(tanswer.NewCommand())
@@ -115,6 +117,8 @@ func (a *app) wrapProductCommand(cmd *cobra.Command) {
 			safelinece.ApplyRuntimeConfig(command, a.config, a.dryRun)
 		case "cloudwalker":
 			cloudwalker.ApplyRuntimeConfig(command, a.config)
+		case "codeinsight":
+			codeinsight.ApplyRuntimeConfig(command, a.config, a.dryRun)
 		case "ddr":
 			ddr.ApplyRuntimeConfig(command, a.config, a.configPath, a.dryRun)
 		case "dsensor":
