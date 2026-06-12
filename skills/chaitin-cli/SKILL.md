@@ -3,12 +3,12 @@ name: chaitin-cli
 description: "Use when running chaitin-cli commands to manage Chaitin security products: SafeLine WAF (site management, IP blocking, ACL, policy rules, attack logs), X-Ray vulnerability scanner (scan tasks, results, assets), CodeInsight (projects, repository configs, scan tasks, reports), CodeForce (projects, AI tasks, denoise, repositories), CloudWalker CWPP (events, vulnerabilities, assets), and T-Answer (firewall rules, blocklists)."
 version: 1.0.0
 author: chaitin
-tags: [chaitin-cli, safeline, xray, codeinsight, codeforce, cloudwalker, tanswer, waf, security, chaitin, cli]
+tags: [chaitin-cli, safeline, xray, codeinsight, codeforce, cloudwalker, tanswer, waf, security, chaitin, cli, ddr, veinmind]
 ---
 
 # chaitin-cli Usage Guide
 
-> Unified CLI for Chaitin security products. Manage SafeLine WAF, X-Ray scanner, CodeInsight, CodeForce, CloudWalker CWPP, and T-Answer through a single tool.
+> Unified CLI for Chaitin security products. Manage SafeLine WAF, DDR, X-Ray scanner, CodeInsight, CodeForce, CloudWalker CWPP, VeinMind container security,  and T-Answer through a single tool.
 
 ## No-Argument Behavior
 
@@ -20,7 +20,7 @@ When `/chaitin-cli` is invoked without any arguments (empty `ARGUMENTS`):
 4. If not found, install it per platform:
    - Windows: Tell the user to manually download the latest release from `https://github.com/chaitin/chaitin-cli/releases`, extract `chaitin-cli.exe`, and add it to PATH. Do not attempt automated installation on Windows.
    - macOS, Linux: Run `bash scripts/install-chaitin-cli.sh`. The script outputs the installed binary path on stdout (last line). Remember this path — subsequent commands must use the full path (e.g. `/home/user/.local/bin/chaitin-cli`) because each Bash invocation starts a new shell and the install directory may not yet be in PATH.
-5. After the setup check, briefly tell the user what they can do next — for example: "You can now use chaitin-cli to manage SafeLine, X-Ray, CodeInsight, CodeForce, CloudWalker, or T-Answer. Tell me what you'd like to do, or run `chaitin-cli --help` to explore commands."
+5. After the setup check, briefly tell the user what they can do next — for example: "You can now use chaitin-cli to manage SafeLine, DDR, X-Ray, CodeInsight, CodeForce, CloudWalker, VeinMind, or T-Answer. Tell me what you'd like to do, or run `chaitin-cli --help` to explore commands."
 
 ## Tool Resolution
 
@@ -86,6 +86,14 @@ cloudwalker:
   url: https://your-cloudwalker-server/rpc
   api_key: YOUR_API_KEY
 
+ddr:
+  url: https://your-ddr-server/qzh/api/v1
+  api_key: YOUR_API_KEY
+
+veinmind:
+  url: https://your-veinmind-server
+  api_key: YOUR_64_CHARACTER_API_TOKEN
+
 tanswer:
   url: https://your-tanswer-server
   api_key: YOUR_API_KEY
@@ -102,6 +110,8 @@ SAFELINE_URL=https://your-safeline-server
 SAFELINE_API_KEY=YOUR_API_KEY
 XRAY_URL=https://your-xray-server/api/v2
 XRAY_API_KEY=YOUR_API_KEY
+DDR_URL=https://your-ddr-server/qzh/api/v1
+DDR_API_KEY=YOUR_API_KEY
 CODEINSIGHT_URL=https://your-codeinsight-server
 CODEINSIGHT_TOKEN=YOUR_ACCESS_TOKEN
 ```
@@ -120,7 +130,7 @@ chaitin-cli -c ./configs/staging.yaml safeline stats overview
 | Flag | Description |
 |------|-------------|
 | `-c, --config` | Config file path (default: `./config.yaml`) |
-| `--dry-run` | Print the API request without executing. Applied by the root command to `xray` and `cloudwalker`. `safeline` registers its own `--dry-run` and forwards it to subcommands. `safeline-ce` inherits the root flag, but the current codebase stores the value without using it; `tanswer` ignores it. |
+| `--dry-run` | Print the API request without executing when the product honors it. Applied by the root command to `xray`, `cloudwalker`, and `veinmind`. `safeline` registers its own `--dry-run` and forwards it to subcommands. `safeline-ce` inherits the root flag, but the current codebase stores the value without using it; `tanswer` ignores it. |
 
 ### Discovering Commands
 
@@ -132,11 +142,11 @@ chaitin-cli <product> <group> --help        # List commands in a group
 chaitin-cli <product> <group> <cmd> --help  # List flags for a specific command
 ```
 
-`chaitin-cli xray` commands are auto-generated from the X-Ray OpenAPI spec (hundreds of operations); `chaitin-cli xray <category> --help` is the only complete reference. `chaitin-cli cloudwalker` has 60+ command groups with similar depth.
+`chaitin-cli xray` commands are auto-generated from the X-Ray OpenAPI spec (hundreds of operations); `chaitin-cli xray <category> --help` is the only complete reference. `chaitin-cli cloudwalker` has 60+ command groups with similar depth. `chaitin-cli veinmind` is generated from the VeinMind OpenAPI spec; always confirm leaf flags with `chaitin-cli veinmind <group> <cmd> --help`.
 
 ### Operating Rules
 
-For SafeLine, X-Ray, CodeInsight, CloudWalker, T-Answer, and SafeLine-CE tasks, treat `chaitin-cli` as the only supported operator interface.
+For SafeLine, X-Ray, DDR, CodeInsight, CloudWalker, VeinMind, T-Answer, and SafeLine-CE tasks, treat `chaitin-cli` as the only supported operator interface.
 
 - Prefer `chaitin-cli ... --help` and existing `chaitin-cli` subcommands over `curl`, ad-hoc HTTP requests, browser debugging, or guessed endpoints.
 - If `chaitin-cli` does not expose the requested product operation, stop and say that the current CLI does not support it. Do not fall back to direct API calls just to "try it".
@@ -152,8 +162,10 @@ Each product uses its own output convention — there is no unified `-f` / `--fo
 |---------|---------|----------------|-------|
 | `chaitin-cli safeline` | table | `--indent` | — |
 | `chaitin-cli safeline-ce` | table | `-o json` (or `--output json`) | `--verbose` |
+| `chaitin-cli ddr` | JSON | `-o json` is already the default | `-o table` for quick manual reading; `-v` for request debug |
 | `chaitin-cli xray` | JSON (no alternative) | — | `--debug` for debug logs |
 | `chaitin-cli cloudwalker` | text | `-f json` (or `--format json`) | `--no-trunc` to disable text truncation |
+| `chaitin-cli veinmind` | table | `-o json` (or `--output json`) | `-v` for request debug; `--dry-run` prints request summary |
 | `chaitin-cli tanswer` | formatted text | `--raw` (bool) | — |
 
 When piping into `jq`, note that SafeLine uses `--indent` (not `-o`/`-f`), and T-Answer uses `--raw`.
@@ -177,10 +189,19 @@ Pick by task, not by product name. Items are listed most- to least-common.
 | Manage CodeForce projects, AI tasks, repositories, and denoise workflows | `codeforce project` · `codeforce audit` · `codeforce denoise` · `codeforce repository` · `codeforce git-auth` |
 | Asset inventory (web / domain / IP) | `xray web_asset` · `xray domain_asset` · `xray ip_asset` |
 | Baseline / compliance check | `xray baseline` · `cloudwalker baseline_v2` |
+| Container security agent management | `veinmind agent` |
+| Container / image / Kubernetes inventory | `veinmind img` · `veinmind container` · `veinmind cluster` · `veinmind host` |
+| Container software / website / web framework inventory | `veinmind app` · `veinmind website` · `veinmind web-framework` |
+| Container security baseline / compliance events | `veinmind baseline` |
+| Container runtime and image risk events | `veinmind risk` |
 | Host-level event response (webshell, reverse shell, brute force) | `cloudwalker webshell_event` · `cloudwalker revshell_event` · `cloudwalker brute_force` |
 | Host asset inventory (process / port / container / user) | `cloudwalker process_asset` · `cloudwalker port_asset` · `cloudwalker docker_container` · `cloudwalker user_asset` |
 | Ransomware protection, file quarantine, kill process | `cloudwalker anti_ransomware` · `cloudwalker file_disposal` · `cloudwalker process_kill` |
 | Host firewall / network block | `cloudwalker firewall` · `cloudwalker network_reject` |
+| DDR device inventory / file scan tasks | `ddr device list` · `ddr device filescantask` · `ddr device filescantask list` |
+| DDR approvals / policy logs | `ddr disposal approvalinstance list` · `ddr policylog channel list` · `ddr policylog softwarenetwork list` |
+| DDR behavior control policies | `ddr policy channel` · `ddr policy landing` · `ddr policy email` · `ddr policy codecontrol` · `ddr policy clipboard` · `ddr policy webpost-control` |
+| DDR device uninstall | `ddr device status-action --operation uninstall` |
 | Traffic-level threat detection firewall (whitelist / block rules) | `tanswer firewall` · `tanswer rules` |
 | System info / license management | `safeline system` · `safeline-ce cert info/get` · `xray system_info` · `xray system_service PostSystemLicense` |
 
@@ -632,6 +653,100 @@ Each category has subcommands — run `chaitin-cli cloudwalker <category> --help
 
 ---
 
+## VeinMind (容器安全)
+
+VeinMind commands are generated from the embedded OpenAPI spec. Use `chaitin-cli veinmind --help` to list all groups, then drill down with `chaitin-cli veinmind <group> --help` and `chaitin-cli veinmind <group> <cmd> --help`.
+
+### Global Flags (VeinMind)
+
+| Flag | Env Var | Description |
+|------|---------|-------------|
+| `--url` | `VEINMIND_URL` | VeinMind API address |
+| `--api-key` | `VEINMIND_API_KEY` | Complete 64-character VeinMind API token |
+| `-o, --output` | — | Output format: `table` (default) or `json` |
+| `-v, --verbose` | — | Print request URL, headers, and body |
+| `--dry-run` | — | Print request summary without sending the product request |
+
+> Note: VeinMind authenticates by splitting the 64-character API token into secret/key parts and creating a session. Its HTTP client skips TLS verification, so self-signed product certificates do not require an extra flag.
+
+### Container Security Command Groups
+
+| Command | Primary use |
+|---------|-------------|
+| `chaitin-cli veinmind agent` | Probe / scanner management, groups, install commands, start/stop/restart/repair/delete |
+| `chaitin-cli veinmind app` | Software asset inventory by software name/version and related images |
+| `chaitin-cli veinmind host` | Non-cluster host inventory and host-related images |
+| `chaitin-cli veinmind baseline` | Shift-left compliance baseline metadata and events |
+| `chaitin-cli veinmind img` | Image inventory, details, layers, history, source info, repair suggestions |
+| `chaitin-cli veinmind container` | Container inventory, container detail, networks, ports, processes, volumes |
+| `chaitin-cli veinmind cluster` | Kubernetes clusters and resources: nodes, pods, services, roles, secrets, workloads, PV/PVC |
+| `chaitin-cli veinmind website` | Web site assets and containers that expose web sites |
+| `chaitin-cli veinmind web-framework` | Web framework assets and containers that expose frameworks |
+| `chaitin-cli veinmind risk` | Runtime/image risk events, event detail, response actions, event status updates |
+
+### Common Read-Only Queries
+
+Prefer `-o json` when parsing or summarizing results. Most list commands use `--offset` and `--page-size`; exact filters differ by command, so check leaf help before adding filters.
+
+```bash
+# Probes / scanners
+chaitin-cli veinmind agent scanner-list --offset 0 --page-size 20 -o json
+chaitin-cli veinmind agent scanner-list --state 2 --host-ip <ip> -o json
+
+# Image and container inventory
+chaitin-cli veinmind img list --offset 0 --page-size 20 --risk 5 -o json
+chaitin-cli veinmind img base-info --id <image-list-id> -o json
+chaitin-cli veinmind container list --offset 0 --page-size 20 --state 3 --risk 4 -o json
+chaitin-cli veinmind container get --id <container-list-id> -o json
+
+# Kubernetes and host inventory
+chaitin-cli veinmind cluster cluster-list --offset 0 --page-size 20 --status 1 -o json
+chaitin-cli veinmind cluster pod-list --cluster-id <cluster-id> --offset 0 --page-size 20 -o json
+chaitin-cli veinmind host list --offset 0 --page-size 20 --name <host-name> -o json
+
+# Software, web site, and web framework assets
+chaitin-cli veinmind app agg-list --offset 0 --page-size 20 --name nginx -o json
+chaitin-cli veinmind website list --offset 0 --page-size 20 --container-name <container-name> -o json
+chaitin-cli veinmind web-framework list --offset 0 --page-size 20 --name spring -o json
+
+# Baseline metadata and events
+chaitin-cli veinmind baseline meta -o json
+chaitin-cli veinmind baseline events --set-id <set-id> --item-id <item-id> --offset 0 --page-size 20 -o json
+
+# Risk events
+chaitin-cli veinmind risk real-time-event-list -o json
+chaitin-cli veinmind risk container-webshell-list --offset 0 --page-size 20 --risk 5 --manage-status 1 -o json
+chaitin-cli veinmind risk container-malicious-file-list --offset 0 --page-size 20 --risk 5 -o json
+chaitin-cli veinmind risk container-revshell-event-list --offset 0 --page-size 20 --risk 4 -o json
+chaitin-cli veinmind risk event-info --event-type 8 --id <event-id> -o json
+```
+
+Useful enum hints from command help:
+
+| Field | Values |
+|-------|--------|
+| `--risk` | `1` no risk, `2` low, `3` medium, `4` high, `5` critical |
+| `--state` on `container list` | `1` creating, `2` created, `3` running, `4` stopped |
+| `--status` on `cluster cluster-list` | `1` reachable, `2` unreachable |
+| `--manage-status` on risk event lists | `1` risky, `2` confirming, `3` resolved, `4` false positive, `5` ignored |
+| `--event-type` on `risk event-info` | `1` image sensitive file, `2` image malicious file, `3` image webshell, `5` container command audit, `6` reverse shell, `7` container malicious file, `8` container webshell, `9` brute force, `10` weak password, `11` in-memory trojan, `12` emergency vuln, `22` escape, `23` abnormal connection |
+
+### Mutating / Response Commands
+
+Treat `agent` start/stop/restart/repair/delete, `agent` group create/update/delete, `cluster delete`, `risk batch-tag-events`, `risk container-op`, `risk file-op`, and `risk resume-*` commands as mutating. Use `--dry-run -v` first when the command supports a request body. Prefer `--body-file` over inline `--body` for JSON payloads.
+
+```bash
+# Inspect the request shape before changing event status
+chaitin-cli --dry-run veinmind risk batch-tag-events --body-file /tmp/veinmind-event-status.json -v -o json
+
+# Inspect the request shape before container / Pod response actions
+chaitin-cli --dry-run veinmind risk container-op --body-file /tmp/veinmind-container-op.json -v -o json
+```
+
+Do not invent VeinMind request bodies. Confirm the leaf command with `--help`, inspect the relevant OpenAPI/source mapping if needed, and only execute mutating commands after the target event, asset, or probe IDs are confirmed.
+
+---
+
 ## T-Answer (全悉 Traffic Threat Detection)
 
 ### Global Flags (T-Answer)
@@ -761,4 +876,260 @@ chaitin-cli safeline-ce module update        # Update global semantics mode
 chaitin-cli safeline-ce cert info            # Get system info
 chaitin-cli safeline-ce cert get             # Get license info
 chaitin-cli safeline-ce cert update          # Update management certificate
+```
+
+---
+
+## DDR (数据安全运营)
+
+### Global Flags (DDR)
+
+| Flag | Env Var | Description |
+|------|---------|-------------|
+| `--url` | `DDR_URL` | DDR API address, usually ending with `/qzh/api/v1` |
+| `--api-key` | `DDR_API_KEY` | API key or Serval token |
+| `-o, --output` | — | Output format: `json` (default) or `table` |
+| `-v, --verbose` | — | Print request URL, headers, and body |
+
+DDR commands default to JSON output. Keep `-o json` in examples when the result will be parsed, and use `-o table` only when the user asks for a compact human-readable summary.
+
+### 创建资产扫描任务流程
+
+1. 根据设备名称查询设备 UID。Example for `PC-000006`:
+
+```bash
+chaitin-cli ddr device list --accept application/json --accept-language zh --content-type application/json --if-none-match '' --x-cs-header-crypt none --x-cs-header-debug false --x-cs-header-timezone Asia/Shanghai -o json --search PC-000006 --limit 20 --page 1
+```
+
+2. 从返回结果里取设备 `id`，并用该设备名称和 ID 修改扫描任务 body 里的 `name`、`include[0].name`、`include[0].id`、`binding_config.include.device_ids`。建议创建临时 JSON 文件，避免命令行转义问题:
+
+```json
+{
+  "file_size_lower_measure": "MB",
+  "file_size_lower": 0,
+  "file_size_upper_measure": "MB",
+  "file_size_upper": 100,
+  "name": "2222-1",
+  "description": "3222",
+  "scope": "common",
+  "include": [
+    {
+      "name": "PC-000341",
+      "id": "62515059-0700-46a8-8441-bb75413e75de",
+      "type": "device",
+      "expand": {
+        "ip": "192.168.96.247",
+        "code": "PC-000341",
+        "username": "orange@orangedeMacBook-Pro",
+        "os_icon": ["macOS"],
+        "status": "activated",
+        "conn_status": "online",
+        "agent_version": "3.9.100",
+        "tags": []
+      }
+    }
+  ],
+  "frequency": "immediately",
+  "worktime_point": [
+    {"begin": "00:00", "end": "23:59", "week": 1},
+    {"begin": "00:00", "end": "23:59", "week": 2},
+    {"begin": "00:00", "end": "23:59", "week": 3},
+    {"begin": "00:00", "end": "23:59", "week": 4},
+    {"begin": "00:00", "end": "23:59", "week": 5},
+    {"begin": "00:00", "end": "23:59", "week": 6},
+    {"begin": "00:00", "end": "23:59", "week": 7}
+  ],
+  "scan_mode": "custom",
+  "dirs_scan_options": {
+    "Windows": [{"path": "C:\\Users"}, {"path": "D:\\"}, {"path": "E:\\"}],
+    "macOS": [{"path": "/tmp/123"}],
+    "Linux": [{"path": "/home"}, {"path": "/data"}],
+    "Kylin": [{"path": "/home"}, {"path": "/data"}],
+    "UOS": [{"path": "/home"}, {"path": "/data"}]
+  },
+  "scan_all_das": true,
+  "expand": {"web": {"file_size_operator": "lt", "file_size_num": 100, "file_size_unit": "MB"}},
+  "file_scan_mode": "speed",
+  "advanced_option": false,
+  "binding_config": {
+    "source": "file_scan",
+    "include": {"device_ids": ["62515059-0700-46a8-8441-bb75413e75de"]},
+    "exclude": {}
+  },
+  "file_exclude_ids": [],
+  "file_include_ids": [],
+  "custom_whitelist": [],
+  "notification_config": [],
+  "governance_id": null
+}
+```
+
+Run the task with the JSON body content:
+
+```bash
+chaitin-cli ddr device filescantask --body "$(cat /tmp/ddr-filescantask.json)"
+```
+
+### 查看扫描任务结果
+
+Query the latest scan task and summarize the result for the user in a compact table when possible:
+
+```bash
+chaitin-cli ddr device filescantask list --body '{"page": 1, "limit": 1, "search": ""}' -o json
+```
+
+### 查看审批任务列表
+
+```bash
+chaitin-cli ddr disposal approvalinstance list --page 1 --limit 10 --search "" -o json
+```
+
+### 外发管控日志查询
+
+```bash
+chaitin-cli ddr policylog channel list --page 1 --limit 20 --search "" -o json
+```
+
+### 网络管理日志查询
+
+```bash
+chaitin-cli ddr policylog softwarenetwork list --page 1 --limit 20 --search "" -o json
+```
+
+### 卸载设备
+
+This is a mutating operation. Confirm the target device UUID before execution and prefer `--dry-run` first when available.
+
+```bash
+./bin/chaitin-cli ddr device status-action --device-id <device uuid> --operation uninstall
+```
+
+### 终端扫描
+```bash
+chaitin-cli ddr device filescantask list  # 终端扫描任务列表
+chaitin-cli ddr device filescantask get --task-id <task id> # 终端扫描任务结果详情
+chaitin-cli ddr device filescantask instance-device-list --task-id=<task_id> --instance-id=<instance_id> # 拉取扫描设备列表
+chaitin-cli ddr device filescantask instance-results-list --task-id=<task_id> --instance-id=<instance_id> # 拉取命中结果列表
+chaitin-cli ddr device filescantask remove --task-id=<task_id> # 删除资产扫描任务
+```
+
+### 渠道管理
+```bash
+chaitin-cli ddr system channeldefgroup list  # 获取渠道列表
+```
+
+### 外发管控
+```bash
+chaitin-cli ddr policy list # 外发管控策略列表
+chaitin-cli ddr policy channel get --policy-id <policy_id> # 外发管控策略详情
+
+
+chaitin-cli ddr policy channel --body='{"mode":"quick","name":"<name>","policy_group_ids":["<policy_group_id>"],"description":"222","risk_level":3,"scope":"common","expression_fields":[{"field":"channel","operator":"contains","value":["<channel_id>"]},{"field":"file_size_limit_mb","operator":"gt","value":10}],"action":"approval","action_template_id":"<action_template_id>","binding_config":{"source":"channel","include":{"device_ids":["<device_id>"]},"exclude":{}}}' # 创建外发管控策略 body 内容建议创建临时文件，避免转移问题, <name> 替换为策略名称, <policy_group_id> 替换为策略组ID, <channel_id> 替换为渠道ID, <device_id> 替换为设备ID, <action_template_id> 替换为动作模板ID
+```
+
+#### 创建外发管控策略 body 内容样例
+```json
+{"mode":"quick","name":"<name>","policy_group_ids":["0f2ad6aa-d1cc-4a4e-a0b0-3bd749579868"],"description":"222","risk_level":3,"scope":"common","expression_fields":[{"field":"channel","operator":"contains","value":["6509b799-78e7-4ede-9af4-2c743897e6c6"]},{"field":"file_size_limit_mb","operator":"gt","value":10}],"action":"approval","action_template_id":"90144b18-e9d2-49ad-9c1d-cef0a4146ccc","binding_config":{"source":"channel","include":{"device_ids":["ebf62d82-f02b-4805-b6c3-31d1475b8061"]},"exclude":{}}}
+```
+
+### 软件管控
+```bash
+chaitin-cli ddr softwaremanager list --page 1 --limit 50 --search "" # 软件管控-软件列表
+chaitin-cli ddr softwaremanager software-hash-list --software-hash=<software-hash> --limit=10 --page=1 --search= --body='{"is_pirated":false,"use_default_query":false,"search":"","queries":[]}' # 软件管控-安装详情 <software-hash> 取 软件管控-软件列表 里的 total_view_digest 字段
+```
+
+### 行为管控策略通用约定
+
+创建或更新策略时优先把 JSON 写到临时文件，再用 `--body-file`，避免 shell 转义错误。启停动作已用 `chaitin-cli --dry-run ddr ... -v` 校验，最小 body 是 `{"operation":"activate"}`；停用通常把 `activate` 换成 `deactivate`。
+
+OpenAPI 里的 `webpost_control` 在 CLI 中会归一化为 `webpost-control`，命令必须写连字符。
+
+### 落盘管控
+```bash
+chaitin-cli ddr system channeldefgroup landing-list -o json # 落盘管控源列表
+chaitin-cli ddr policy landing list # 落盘管控列表
+chaitin-cli ddr policy landing action --uid <policy_id> --body '{"operation":"activate"}' # 启用落盘管控策略
+chaitin-cli ddr policy landing action --uid <policy_id> --body '{"operation":"deactivate"}' # 停用落盘管控策略
+chaitin-cli ddr policy landing get --uid <policy_id> # 落盘管控详情
+chaitin-cli ddr policy landing remove --uid <policy_id> # 删除落盘管控策略
+chaitin-cli ddr policy landing --body-file /tmp/ddr-policy-landing.json # 创建落盘管控策略
+```
+
+#### 创建 落盘管控 body 内容样例
+```json
+{"name":"test_langding","scope":"common","expression_fields":[{"field":"channel","operator":"contains","value":["6509b799-78e7-4ede-9af4-2c743897e6c6"]}],"action":"notify","category":"landing","policy_group_ids":[null],"binding_config":{"source":"landing","include":{"device_ids":["0578ae3e-6369-4cc4-bad6-ff48f1cf6ceb"]},"exclude":{}}}
+```
+
+### 邮件管控 - email
+```bash
+chaitin-cli ddr system channeldefgroup email-list -o json # 邮件管控源列表
+chaitin-cli ddr policy email list -o json # 邮件管控策略列表
+chaitin-cli ddr policy email get --uid <policy_id> -o json # 邮件管控策略详情
+chaitin-cli ddr policy email action --uid <policy_id> --body '{"operation":"activate"}' # 启用邮件管控策略
+chaitin-cli ddr policy email action --uid <policy_id> --body '{"operation":"deactivate"}' # 停用邮件管控策略
+chaitin-cli ddr policy email remove --uid <policy_id> # 删除邮件管控策略
+chaitin-cli ddr policy email --body-file /tmp/ddr-policy-email.json # 创建邮件管控策略
+chaitin-cli ddr policy email entitywhitelist-list -o json # 邮件管控实体白名单列表
+chaitin-cli ddr policylog email timelinelist --body '{"time_range":{"begin":"2023-11-14 10:55:38","end":"2023-11-14 11:55:38"},"search":"","queries":[]}' -o json # 邮件管控时间线
+chaitin-cli ddr policylog email stafflist --body '{"time_range":{"begin":"2023-11-14 10:55:38","end":"2023-11-14 11:55:38"},"search":"","queries":[]}' -o json # 邮件管控员工列表
+```
+
+#### 创建 邮件管控 body 内容样例
+```json
+{"name":"邮件策略","description":"策略描述","scope":"global","binding_config":{"source":"email","include":{},"exclude":{}},"action":"notify","expression":"N/A","expression_relation":"all","expression_fields":[{"field":"channel","operator":"contains","value":["all_channels"]}]}
+```
+
+### 代码管控 - codecontrol
+```bash
+chaitin-cli ddr policy codecontrol list --page 1 --page-size 20 --search "" -o json # 代码管控策略列表
+chaitin-cli ddr policy codecontrol get --policy-id <policy_id> -o json # 代码管控策略详情
+chaitin-cli ddr policy codecontrol action --policy-id <policy_id> --body '{"operation":"activate"}' # 启用代码管控策略
+chaitin-cli ddr policy codecontrol action --policy-id <policy_id> --body '{"operation":"deactivate"}' # 停用代码管控策略
+chaitin-cli ddr policy codecontrol remove --policy-id <policy_id> # 删除代码管控策略
+chaitin-cli ddr policy codecontrol create --body-file /tmp/ddr-policy-codecontrol.json # 创建代码管控策略
+chaitin-cli ddr policy codecontrol update --policy-id <policy_id> --body-file /tmp/ddr-policy-codecontrol.json # 更新代码管控策略
+chaitin-cli ddr policy codecontrol configwhitelist-list -o json # 代码管控配置白名单列表
+chaitin-cli ddr policy codecontrol controlwhitelist-list -o json # 代码管控管控白名单列表
+chaitin-cli ddr policy codecontrol entitywhitelist-list -o json # 代码管控实体白名单列表
+chaitin-cli ddr policylog code timelinelist --body '{"time_range":{"begin":"2023-11-14 10:55:38","end":"2023-11-14 11:55:38"},"search":"","queries":[]}' -o json # 代码管控时间线
+chaitin-cli ddr policylog code stafflist --body '{"time_range":{"begin":"2023-11-14 10:55:38","end":"2023-11-14 11:55:38"},"search":"","queries":[]}' -o json # 代码管控员工列表
+chaitin-cli ddr policylog code download --body '{"time_range":{"begin":"2023-11-14 10:55:38","end":"2023-11-14 11:55:38"},"search":"","queries":[]}' # 代码管控导出
+```
+
+#### 创建 代码管控 body 内容样例
+```json
+{"name":"代码管控策略","description":"策略描述","scope":"global","period_category":"permanent","period_options":{"period_value":["2023-01-01 00:00:00","2023-01-01 00:00:00"]},"binding_config":{"include":{"device_ids":[],"device_tag_ids":[],"staff_ids":[],"staff_tag_ids":[],"dept_ids":[]},"exclude":{},"source":"code_control"},"control_action":{"category":"upload","expression_fields":{"git":{"left":"repository_url","operator":"contains","value":["github.com/example"]},"svn":{"left":"repository_url","operator":"contains","value":["svn.example.com"]}}},"action":"notify","action_template_id":"<action_template_id>"}
+```
+
+### 剪贴板管控 - clipboard
+```bash
+chaitin-cli ddr policy clipboard --body-file /tmp/ddr-policy-clipboard.json # 创建剪贴板管控策略
+chaitin-cli ddr policylog clipboard list --page 1 --limit 20 --search "" --body '{"time_range":{"begin":"2024-09-23T06:36:00Z","end":"2024-11-22T06:36:59Z"},"search":"","queries":[]}' -o json # 剪贴板管控日志列表
+chaitin-cli ddr policylog clipboard timelinelist --body '{"time_range":{"begin":"2024-09-23T06:36:00Z","end":"2024-11-22T06:36:59Z"},"search":"","queries":[]}' -o json # 剪贴板管控时间线
+chaitin-cli ddr policylog clipboard stafflist --body '{"time_range":{"begin":"2024-09-23T06:36:00Z","end":"2024-11-22T06:36:59Z"},"search":"","queries":[]}' -o json # 剪贴板管控员工列表
+chaitin-cli ddr clipboardbehavior timelinelist --body '{"time_range":{"begin":"2024-09-23T06:36:00Z","end":"2024-11-22T06:36:59Z"},"search":"","queries":[]}' -o json # 剪贴板行为时间线
+chaitin-cli ddr clipboardbehavior stafflist --body '{"time_range":{"begin":"2024-09-23T06:36:00Z","end":"2024-11-22T06:36:59Z"},"search":"","queries":[]}' -o json # 剪贴板行为员工列表
+```
+
+#### 创建 剪贴板管控 body 内容样例
+```json
+{"name":"剪贴板策略","period_category":"permanent","scope":"common","family":"Windows","control_category":"copy","expression_fields":[{"field":"source_process","operator":"contains","value":["example.exe"]}],"action":"notify","binding_config":{"source":"clipboard","include":{"device_ids":["<device_id>"]},"exclude":{}}}
+```
+
+### 网页管控 - webpost_control
+```bash
+chaitin-cli ddr policy webpost-control list --page 1 --limit 20 --search "" -o json # 网页管控策略列表
+chaitin-cli ddr policy webpost-control get --policy-id <policy_id> -o json # 网页管控策略详情
+chaitin-cli ddr policy webpost-control action --policy-id <policy_id> --body '{"operation":"activate"}' # 启用网页管控策略
+chaitin-cli ddr policy webpost-control action --policy-id <policy_id> --body '{"operation":"deactivate"}' # 停用网页管控策略
+chaitin-cli ddr policy webpost-control remove --policy-id <policy_id> # 删除网页管控策略
+chaitin-cli ddr policy webpost-control create --body-file /tmp/ddr-policy-webpost-control.json # 创建网页管控策略
+chaitin-cli ddr policy webpost-control update --policy-id <policy_id> --body-file /tmp/ddr-policy-webpost-control.json # 更新网页管控策略
+chaitin-cli ddr policy webpost-control whitelist-list -o json # 网页管控管控白名单列表
+chaitin-cli ddr policy webpost-control entitywhitelist-list -o json # 网页管控实体白名单列表
+```
+
+#### 创建 网页管控 body 内容样例
+```json
+{"name":"网页管控策略","description":"策略描述","scope":"global","period_category":"permanent","period_options":{"period_hours_value":[{"begin":"00:00","end":"23:59","week":1},{"begin":"00:00","end":"23:59","week":2},{"begin":"00:00","end":"23:59","week":3},{"begin":"00:00","end":"23:59","week":4},{"begin":"00:00","end":"23:59","week":5},{"begin":"00:00","end":"23:59","week":6},{"begin":"00:00","end":"23:59","week":7}]},"binding_config":{"include":{"device_ids":[],"device_tag_ids":[],"staff_ids":[],"staff_tag_ids":[],"dept_ids":[]},"exclude":{},"source":"webpost_control"},"control_action":{"expression_fields":[{"left":"content","operator":"contains","value":["secret"]}]},"action":"notify","action_template_id":"<action_template_id>","checked_urls_options":{"left":"url","operator":"contains","value":["example.com"]},"detect_position":"form_internal"}
 ```
