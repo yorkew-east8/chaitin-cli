@@ -77,7 +77,7 @@ func TestCreateAndPersistAPIToken(t *testing.T) {
 			case "/qzh/api/auth/v1/ns/attributes":
 				seenAttrPath = req.URL.Path
 				seenAttrAuth = req.Header.Get("Authorization")
-				body = `{"data":{"attributes":[{"k":"corp_name","v":"corp-1"}]}}`
+				body = `{"data":{"attributes":[{"k":"corp_name","v":"company-1"}]}}`
 			default:
 				t.Fatalf("unexpected path: %s", req.URL.Path)
 			}
@@ -114,7 +114,7 @@ func TestCreateAndPersistAPIToken(t *testing.T) {
 	if seenAttrPath != "/qzh/api/auth/v1/ns/attributes" {
 		t.Fatalf("attributes path = %q", seenAttrPath)
 	}
-	if result.Token != wantToken || result.CompanyID != "corp-1" {
+	if result.Token != wantToken || result.CompanyID != "company-1" {
 		t.Fatalf("unexpected result: %+v", result)
 	}
 
@@ -128,7 +128,7 @@ func TestCreateAndPersistAPIToken(t *testing.T) {
 	if err := node.Decode(&saved); err != nil {
 		t.Fatalf("Decode() error = %v", err)
 	}
-	if saved.URL != baseURL+"/qzh/api/v1" || saved.APIKey != wantToken || saved.CompanyID != "corp-1" {
+	if saved.URL != baseURL+"/qzh/api/v1" || saved.APIKey != wantToken || saved.CompanyID != "company-1" {
 		t.Fatalf("unexpected saved config: %+v", saved)
 	}
 }

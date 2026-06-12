@@ -163,8 +163,12 @@ func isParameterSegment(segment string) bool {
 
 func operationName(segments []string, method string) string {
 	filtered := make([]string, 0, len(segments))
+	var parameterPrefix string
 	for _, segment := range segments {
 		if isParameterSegment(segment) {
+			if len(filtered) == 0 && parameterPrefix == "" {
+				parameterPrefix = normalizeCommandSegment(segment)
+			}
 			continue
 		}
 		filtered = append(filtered, segment)
@@ -186,6 +190,10 @@ func operationName(segments []string, method string) string {
 		return "get"
 	case "modify":
 		return "update"
+	}
+
+	if len(filtered) == 1 && parameterPrefix != "" && strings.EqualFold(last, "list") {
+		return normalizeCommandSegment(parameterPrefix + "-list")
 	}
 
 	return normalizeCommandSegment(strings.Join(filtered, "-"))

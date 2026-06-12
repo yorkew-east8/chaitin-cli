@@ -47,7 +47,7 @@ func NewCommand() *cobra.Command {
 	cmd.PersistentFlags().String("url", "", "API URL")
 	cmd.PersistentFlags().String("api-key", "", "API key used as Authorization header")
 	cmd.PersistentFlags().String("company-id", "", "Company ID used as X-CS-Header-Company header")
-	cmd.PersistentFlags().StringP("output", "o", "table", "Output format (table|json)")
+	cmd.PersistentFlags().StringP("output", "o", "json", "Output format (table|json)")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Print request URL, headers, and body")
 	cmd.PersistentFlags().StringVar(&headerApp, "x-cs-header-app", "qzh", "Value for X-CS-Header-App header")
 	cmd.PersistentFlags().StringVar(&headerDebug, "x-cs-header-debug", "", "Value for X-CS-Header-Debug header")
@@ -112,9 +112,9 @@ func loadDynamicCommands(cmd *cobra.Command) error {
 }
 
 func getRenderer(cmd *cobra.Command) Renderer {
-	format := FormatTable
-	if output, _ := cmd.Flags().GetString("output"); output == "json" {
-		format = FormatJSON
+	format := FormatJSON
+	if output, _ := cmd.Flags().GetString("output"); output == "table" {
+		format = FormatTable
 	}
 	return NewRenderer(format, cmd.OutOrStdout())
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,11 +16,12 @@ import (
 )
 
 type Client struct {
-	config     *Config
-	headers    map[string]string
-	httpClient *http.Client
-	baseURL    string
-	verbose    bool
+	config           *Config
+	headers          map[string]string
+	httpClient       *http.Client
+	baseURL          string
+	verbose          bool
+	companyIDFetched bool
 }
 
 func NewClient(cfg *Config, headers map[string]string, verbose bool) *Client {
@@ -41,6 +43,11 @@ func (c *Client) Do(ctx context.Context, method, path string, query url.Values, 
 	reqURL := c.buildURL(path)
 	if len(query) > 0 {
 		reqURL += "?" + query.Encode()
+	}
+	if !dryRun && shouldFetchCompanyID(reqURL) {
+		if err := c.ensureCompanyID(ctx); err != nil {
+			return err
+		}
 	}
 
 	var reqBody io.Reader
@@ -86,12 +93,10 @@ func (c *Client) buildURL(path string) string {
 }
 
 func (c *Client) injectHeaders(req *http.Request, headers map[string]string, hasBody bool) {
-	authInfo := c.config.APIKey
-	if !strings.HasPrefix(authInfo, "Serval ") && !strings.HasPrefix(authInfo, "Bearer ") {
-		authInfo = "Serval " + authInfo
+	req.Header.Set("Authorization", buildAuthorizationHeader(c.config.APIKey))
+	if c.companyIDFetched && c.config.CompanyID != "" {
+		req.Header.Set("X-CS-Header-Company", c.config.CompanyID)
 	}
-	req.Header.Set("Authorization", authInfo)
-	req.Header.Set("X-CS-Header-Company", c.config.CompanyID)
 	for key, value := range c.headers {
 		if value == "" {
 			continue
@@ -107,6 +112,57 @@ func (c *Client) injectHeaders(req *http.Request, headers map[string]string, has
 	if hasBody && req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
+}
+
+func (c *Client) ensureCompanyID(ctx context.Context) error {
+	if c.companyIDFetched {
+		return nil
+	}
+	companyID, err := fetchCompanyID(ctx, c)
+	if err != nil {
+		return err
+	}
+	c.config.CompanyID = companyID
+	c.companyIDFetched = true
+	return nil
+}
+
+func shouldFetchCompanyID(rawURL string) bool {
+	parsed, err := url.Parse(rawURL)
+	if err == nil && parsed.Path != "" {
+		return !strings.HasPrefix(parsed.Path, "/qzh/api/auth/")
+	}
+	return !strings.HasPrefix(rawURL, "/qzh/api/auth/")
+}
+
+func buildAuthorizationHeader(apiKey string) string {
+	authInfo := strings.TrimSpace(apiKey)
+	if strings.HasPrefix(authInfo, "Bearer ") {
+		return authInfo
+	}
+	return buildServalAuthorizationHeader(authInfo)
+}
+
+func buildServalAuthorizationHeader(apiKey string) string {
+	authInfo := strings.TrimSpace(apiKey)
+	if strings.HasPrefix(authInfo, "Serval ") {
+		return authInfo
+	}
+	if isEncodedServalToken(authInfo) {
+		return "Serval " + authInfo
+	}
+	return "Serval " + buildServalToken(authInfo)
+}
+
+func isEncodedServalToken(token string) bool {
+	if token == "" {
+		return false
+	}
+	decoded, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		decoded, err = base64.RawStdEncoding.DecodeString(token)
+	}
+	return err == nil && strings.HasPrefix(string(decoded), "serval:")
 }
 
 func (c *Client) handleResponse(resp *http.Response, result interface{}) error {

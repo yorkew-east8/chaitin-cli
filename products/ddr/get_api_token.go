@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -104,7 +105,10 @@ func createAndPersistAPIToken(ctx context.Context, client *Client, configPath, j
 	}
 
 	token := buildServalToken(accessKey)
-	companyID, err := fetchCompanyID(ctx, client, token)
+	originalAPIKey := client.config.APIKey
+	client.config.APIKey = token
+	companyID, err := fetchCompanyID(ctx, client)
+	client.config.APIKey = originalAPIKey
 	if err != nil {
 		return nil, err
 	}
@@ -201,22 +205,36 @@ func buildServalToken(accessKey string) string {
 	return base64.StdEncoding.EncodeToString([]byte("serval:" + accessKey))
 }
 
-func fetchCompanyID(ctx context.Context, client *Client, token string) (string, error) {
-	originalToken := client.config.APIKey
-	originalCompanyID := client.config.CompanyID
-	client.config.APIKey = token
-	client.config.CompanyID = ""
-	defer func() {
-		client.config.APIKey = originalToken
-		client.config.CompanyID = originalCompanyID
-	}()
+func fetchCompanyID(ctx context.Context, client *Client) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, buildFixedAuthURL(client.config.URL, "/qzh/api/auth/v1/ns/attributes"), nil)
+	if err != nil {
+		return "", NewNetworkError("failed to create request", err)
+	}
+	req.Header.Set("Authorization", buildServalAuthorizationHeader(client.config.APIKey))
 
-	var resp nsAttributesResponse
-	if err := client.Do(ctx, http.MethodGet, buildFixedAuthURL(client.config.URL, "/qzh/api/auth/v1/ns/attributes"), nil, nil, nil, &resp); err != nil {
-		return "", err
+	if client.verbose {
+		logRequest(req, nil)
 	}
 
-	for _, attr := range resp.Data.Attributes {
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return "", NewNetworkError("request failed", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", NewNetworkError("failed to read response body", err)
+	}
+	if resp.StatusCode >= 400 {
+		return "", NewAPIError(resp.StatusCode, fmt.Sprintf("API request failed (status %d): %s", resp.StatusCode, strings.TrimSpace(string(body))))
+	}
+
+	var respBody nsAttributesResponse
+	if err := json.Unmarshal(body, &respBody); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+	for _, attr := range respBody.Data.Attributes {
 		if attr.Key == "corp_name" && attr.Value != "" {
 			return attr.Value, nil
 		}
