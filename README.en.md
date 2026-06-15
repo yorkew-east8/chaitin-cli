@@ -159,6 +159,8 @@ safeline.api_key     -> SAFELINE_API_KEY
 
 SafeLine-3 commands use an OpenAPI token. Configure `safeline-3.api_token` or set `SAFELINE_3_API_TOKEN`.
 
+SafeLine-3 calling guidance for AI agents lives in [`products/safeline3/agent-skill.md`](products/safeline3/agent-skill.md).
+
 ```bash
 chaitin-cli safeline-3 node-group list --output json
 chaitin-cli safeline-3 site list --type reverse-proxy --page 1 --page-size 20 --output json

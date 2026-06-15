@@ -182,6 +182,8 @@ chaitin-cli apisec risk event list --query count=20 --query offset=0 --output js
 
 SafeLine-3 命令使用 OpenAPI Token，请在配置中填写 `safeline-3.api_token`，或设置 `SAFELINE_3_API_TOKEN`。
 
+AI Agent 的 SafeLine-3 调用策略见 [`products/safeline3/agent-skill.md`](products/safeline3/agent-skill.md)。
+
 ```bash
 chaitin-cli safeline-3 node-group list --output json
 chaitin-cli safeline-3 site list --type reverse-proxy --page 1 --page-size 20 --output json
