@@ -141,6 +141,10 @@ codeforce:
   url: https://codeforce.example.com
   access_token: YOUR_ACCESS_TOKEN
   account_type: admin
+
+cosmos:
+  url: https://cosmos.example.com
+  api_key: YOUR_JWT_BEARER_TOKEN
 ```
 也可以把同样的配置放到环境变量或本地 `.env` 文件中。变量命名规则为 `<PRODUCT>_<FIELD>`：
 
@@ -165,6 +169,8 @@ codeinsight.access_token -> CODEINSIGHT_ACCESS_TOKEN 或 CODEINSIGHT_TOKEN
 codeforce.url        -> CODEFORCE_URL
 codeforce.access_token -> CODEFORCE_ACCESS_TOKEN 或 CODEFORCE_API_KEY
 codeforce.account_type -> CODEFORCE_ACCOUNT_TYPE
+cosmos.url           -> COSMOS_URL
+cosmos.api_key       -> COSMOS_API_KEY
 safeline-ce.url      -> SAFELINE_CE_URL
 safeline-ce.api_key  -> SAFELINE_CE_API_KEY
 safeline-3.url       -> SAFELINE_3_URL
@@ -203,6 +209,23 @@ chaitin-cli safeline-3 raw request GET /api/v3/license
 ```
 
 创建、更新、删除等复杂请求优先使用实体命令的语义参数；复杂嵌套结构可使用对应的 `--payload-file`、`--application-file` 等文件入口。`raw request` 是兜底入口，可调用未封装的 `/api/v3/...` 接口。
+
+### Cosmos / AISOC 资产接口
+
+Cosmos 通用 JSON-RPC 命令支持根级 `--dry-run`，会打印脱敏后的请求摘要，不会发送请求。保存主机资产时，当前后端通常需要资产类型和分组：
+
+```bash
+chaitin-cli cosmos asset search-host-asset --count 20 --offset 0 --raw
+
+chaitin-cli --dry-run cosmos asset save-host-asset \
+  --ip 10.0.0.1/32 \
+  --name demo-host \
+  --organization_id 1 \
+  --asset_ip_type 1 \
+  --category_ids '[{"id":41,"name":"Linux"}]' \
+  --group_id 1 \
+  --raw
+```
 
 ### SafeLine 企业版 AI 站点操作
 
@@ -246,6 +269,7 @@ chaitin-cli -c ./configs/safeline-staging.yaml safeline stats overview
 
 ```bash
 chaitin-cli --dry-run xray plan PostPlanFilter --filterPlan.limit=10
+chaitin-cli --dry-run cosmos asset save-host-asset --ip 10.0.0.1/32 --name demo-host --organization_id 1 --category_ids '[{"id":41,"name":"Linux"}]' --group_id 1
 ```
 
 ### CodeInsight 项目与任务

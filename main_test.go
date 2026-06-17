@@ -32,6 +32,54 @@ func TestDryRunHelpMentionsRequestSummary(t *testing.T) {
 	}
 }
 
+func TestCosmosDryRunFromRootDoesNotRequireNetwork(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("cosmos:\n  url: https://cosmos.example\n  api_key: secret-token-value\n"), 0644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	app, err := newApp()
+	if err != nil {
+		t.Fatalf("newApp() error = %v", err)
+	}
+
+	var out strings.Builder
+	var errOut strings.Builder
+	app.root.SetOut(&out)
+	app.root.SetErr(&errOut)
+	app.root.SetArgs([]string{
+		"--dry-run",
+		"-c", configPath,
+		"cosmos", "asset", "save-host-asset",
+		"--ip", "10.0.0.1/32",
+		"--name", "dry-run-asset",
+		"--organization_id", "1",
+	})
+
+	if err := app.execute(); err != nil {
+		t.Fatalf("execute() error = %v\nstderr:\n%s", err, errOut.String())
+	}
+
+	got := out.String()
+	for _, want := range []string{
+		`"dry_run": true`,
+		`"url": "https://cosmos.example/pedestal/rpc"`,
+		`"method": "AssetService.SaveHostAsset"`,
+		`"ip": "10.0.0.1/32"`,
+		`"name": "dry-run-asset"`,
+		`"organization_id": 1`,
+		`"Authorization": "Bearer secr...alue"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dry-run output missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "secret-token-value") {
+		t.Fatalf("dry-run output leaked token:\n%s", got)
+	}
+}
+
 func TestRootHelpIncludesCodeForce(t *testing.T) {
 	app, err := newApp()
 	if err != nil {

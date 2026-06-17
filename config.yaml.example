@@ -45,3 +45,7 @@ codeforce:
   url: ""
   access_token: ""
   account_type: "admin"
+
+cosmos:
+  url: ""
+  api_key: ""

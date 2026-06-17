@@ -136,6 +136,10 @@ codeforce:
   url: https://codeforce.example.com
   access_token: YOUR_ACCESS_TOKEN
   account_type: admin
+
+cosmos:
+  url: https://cosmos.example.com
+  api_key: YOUR_JWT_BEARER_TOKEN
 ```
 You can also put the same keys into environment variables or a local `.env` file. Variable names follow `<PRODUCT>_<FIELD>`:
 
@@ -158,6 +162,8 @@ codeinsight.access_token -> CODEINSIGHT_ACCESS_TOKEN or CODEINSIGHT_TOKEN
 codeforce.url        -> CODEFORCE_URL
 codeforce.access_token -> CODEFORCE_ACCESS_TOKEN or CODEFORCE_API_KEY
 codeforce.account_type -> CODEFORCE_ACCOUNT_TYPE
+cosmos.url           -> COSMOS_URL
+cosmos.api_key       -> COSMOS_API_KEY
 safeline-ce.url      -> SAFELINE_CE_URL
 safeline-ce.api_key  -> SAFELINE_CE_API_KEY
 safeline-3.url       -> SAFELINE_3_URL
@@ -204,6 +210,24 @@ Use root-level `--dry-run` for commands that support dry-run:
 
 ```bash
 chaitin-cli --dry-run xray plan PostPlanFilter --filterPlan.limit=10
+chaitin-cli --dry-run cosmos asset save-host-asset --ip 10.0.0.1/32 --name demo-host --organization_id 1 --category_ids '[{"id":41,"name":"Linux"}]' --group_id 1
+```
+
+### Cosmos / AISOC Asset APIs
+
+Cosmos generic JSON-RPC commands support root-level `--dry-run`, which prints a redacted request summary without sending the request. Saving a host asset usually needs both category and group parameters on current deployments:
+
+```bash
+chaitin-cli cosmos asset search-host-asset --count 20 --offset 0 --raw
+
+chaitin-cli --dry-run cosmos asset save-host-asset \
+  --ip 10.0.0.1/32 \
+  --name demo-host \
+  --organization_id 1 \
+  --asset_ip_type 1 \
+  --category_ids '[{"id":41,"name":"Linux"}]' \
+  --group_id 1 \
+  --raw
 ```
 
 ### CodeInsight Projects And Tasks
