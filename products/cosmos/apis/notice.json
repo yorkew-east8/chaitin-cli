@@ -11,7 +11,7 @@
       "type": {
         "type": "integer",
         "optional": false,
-        "comment": "Webhook类型"
+        "comment": "Webhook类型: 0钉钉 1企业微信"
       },
       "webhook_secret": {
         "type": "string",
@@ -116,7 +116,7 @@
       "type": {
         "type": "integer",
         "optional": true,
-        "comment": "Webhook类型过滤"
+        "comment": "Webhook类型过滤: 0钉钉 1企业微信"
       }
     },
     "reply": {}
@@ -140,7 +140,7 @@
       "template_type": {
         "type": "string",
         "optional": false,
-        "comment": "模板类型"
+        "comment": "模板类型: asset_ip IP资产 asset_web应用资产 vuln_ip IP漏洞 vuln_web应用漏洞 alarm告警"
       }
     },
     "reply": {}
@@ -269,7 +269,7 @@
       "template_type": {
         "type": "string",
         "optional": false,
-        "comment": "模板类型"
+        "comment": "模板类型: asset_ip IP资产 asset_web应用资产 vuln_ip IP漏洞 vuln_web应用漏洞 alarm告警"
       },
       "title": {
         "type": "string",
@@ -316,7 +316,7 @@
       "status": {
         "type": "integer",
         "optional": false,
-        "comment": "策略状态: 1启用 2禁用"
+        "comment": "策略状态: 1未启用/禁用 2已启用"
       }
     },
     "reply": {}
@@ -362,13 +362,13 @@
       "status": {
         "type": "string",
         "optional": true,
-        "comment": "状态过滤（JSON，如: [{\"eq\":1}]）",
+        "comment": "状态过滤: 1未启用/禁用 2已启用（JSON，如: [{\"eq\":1}]）",
         "queryType": "UintQuery"
       },
       "strategy_type": {
         "type": "string",
         "optional": true,
-        "comment": "策略类型过滤（JSON，如: [{\"eq\":\"type\"}]）",
+        "comment": "策略类型过滤: audit_log审计日志 sys_alarm系统告警（JSON，如: [{\"eq\":\"sys_alarm\"}]）",
         "queryType": "StringQuery"
       },
       "updated_at": {
@@ -424,7 +424,7 @@
       "strategy_type": {
         "type": "string",
         "optional": false,
-        "comment": "策略类型"
+        "comment": "策略类型: audit_log审计日志 sys_alarm系统告警"
       },
       "template": {
         "type": "string",
@@ -500,7 +500,7 @@
       "strategy_type": {
         "type": "string",
         "optional": false,
-        "comment": "策略类型"
+        "comment": "策略类型: audit_log审计日志 sys_alarm系统告警"
       },
       "template": {
         "type": "string",
@@ -549,7 +549,7 @@
       "channel": {
         "type": "string",
         "optional": true,
-        "comment": "通知渠道过滤（JSON，如: [{\"in\":[1,2]}]）",
+        "comment": "通知渠道过滤: 0邮件 1短信 2Webhook（JSON，如: [{\"in\":[1,2]}]）",
         "queryType": "UintInArrayQuery"
       },
       "id": {
@@ -561,7 +561,7 @@
       "module": {
         "type": "string",
         "optional": true,
-        "comment": "模块过滤（JSON，如: [{\"in\":[1,2]}]）",
+        "comment": "模块过滤: 1网站监测 2告警 3关联分析 4报表 5流量查询 6监控告警 7事件存储可用性（JSON，如: [{\"in\":[1,2]}]）",
         "queryType": "UintInArrayQuery"
       },
       "user_id": {
@@ -580,7 +580,7 @@
       "channel": {
         "type": "string",
         "optional": false,
-        "comment": "通知渠道（JSON数组，如: [{\"channel_type\":1,\"enabled\":true}]）",
+        "comment": "通知渠道（JSON数组，channel_type: 0邮件 1短信 2Webhook，如: [{\"channel_type\":1,\"enabled\":true}]）",
         "queryType": "JSON"
       },
       "describe": {
@@ -596,7 +596,7 @@
       "module": {
         "type": "string",
         "optional": false,
-        "comment": "通知模块（JSON数组，如: [{\"module_type\":1,\"enabled\":true}]）",
+        "comment": "通知模块（JSON数组，module_type: 1网站监测 2告警 3关联分析 4报表 5流量查询 6监控告警 7事件存储可用性，如: [{\"module_type\":1,\"enabled\":true}]）",
         "queryType": "JSON"
       },
       "name": {

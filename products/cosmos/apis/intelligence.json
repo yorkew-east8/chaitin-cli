@@ -22,19 +22,19 @@
       "ioc_src": {
         "type": "string",
         "optional": true,
-        "comment": "情报来源 (JSON, 如: [{\"oper\":\"like\",\"target\":\"manual_add\"}]       // oper: =,!=,like,not like,reg,is_null)",
+        "comment": "情报来源: cosmos_analyze万象分析 manual_add人工新增 chaitin_shared长亭共享 aliyun阿里云 threatbook微步 tianji平台情报 safe_point长亭情报库导入 (JSON, 如: [{\"oper\":\"like\",\"target\":\"manual_add\"}]       // oper: =,!=,like,not like,reg,is_null)",
         "queryType": "StringQuery"
       },
       "severity": {
         "type": "string",
         "optional": true,
-        "comment": "威胁等级: 0信息 1低危 2中危 3高危 4严重 (JSON, 如: [{\"oper\":\"=\",\"target\":3}]             // oper: =,!=,>,>=,<,<=,is_null)",
+        "comment": "威胁等级: 0信息/无威胁 1低危 2中危 3高危 4严重/超危 (JSON, 如: [{\"oper\":\"=\",\"target\":3}]             // oper: =,!=,>,>=,<,<=,is_null)",
         "queryType": "IntQuery"
       },
       "confidence_level": {
         "type": "string",
         "optional": true,
-        "comment": "可信度等级: 2低可信 3一定可信 4高可信 (JSON, 如: [{\"oper\":\"=\",\"target\":3}]             // oper: =,!=,>,>=,<,<=,is_null)",
+        "comment": "可信度等级: 2低可信[0,60) 3一定可信[60,85) 4高可信[85,100] (JSON, 如: [{\"oper\":\"=\",\"target\":3}]             // oper: =,!=,>,>=,<,<=,is_null)",
         "queryType": "IntQuery"
       },
       "updated_at": {
@@ -52,13 +52,13 @@
       "is_hit": {
         "type": "string",
         "optional": true,
-        "comment": "是否命中 (JSON, 如: [{\"oper\":\"=\",\"target\":1}]             // oper: =,!=,>,>=,<,<=,is_null)",
+        "comment": "是否命中: 1命中 2未命中 (JSON, 如: [{\"oper\":\"=\",\"target\":1}]             // oper: =,!=,>,>=,<,<=,is_null)",
         "queryType": "IntQuery"
       },
       "is_block": {
         "type": "string",
         "optional": true,
-        "comment": "是否封禁 (JSON, 如: [{\"oper\":\"=\",\"target\":1}]             // oper: =,!=,>,>=,<,<=,is_null)",
+        "comment": "是否封禁: 1封禁中 2未封禁 (JSON, 如: [{\"oper\":\"=\",\"target\":1}]             // oper: =,!=,>,>=,<,<=,is_null)",
         "queryType": "IntQuery"
       },
       "judgments": {
@@ -130,12 +130,12 @@
       "ip_ioc.threat_type": {
         "type": "string",
         "optional": false,
-        "comment": "情报类型，如 ATTACK_IP、VICTIM_IP、IP_INFO"
+        "comment": "情报类型: 攻击IP 失陷IP IP信息"
       },
       "ip_ioc.severity": {
         "type": "integer",
         "optional": false,
-        "comment": "威胁等级: 0信息 1低危 2中危 3高危 4严重"
+        "comment": "威胁等级: 0信息/无威胁 1低危 2中危 3高危 4严重/超危"
       },
       "ip_ioc.confidence": {
         "type": "integer",
@@ -145,7 +145,7 @@
       "ip_ioc.confidence_level": {
         "type": "integer",
         "optional": false,
-        "comment": "可信度等级: 2低可信 3一定可信 4高可信"
+        "comment": "可信度等级: 2低可信[0,60) 3一定可信[60,85) 4高可信[85,100]"
       },
       "ip_ioc.todo_propose": {
         "type": "string",
@@ -255,13 +255,13 @@
       "threat_tags": {
         "type": "string",
         "optional": true,
-        "comment": "人工新增-威胁标签(JSON数组，如: [{\"types\":1,\"tag\":\"Scanner\",\"validity\":1}])",
+        "comment": "人工新增-威胁标签(JSON数组，types: 1威胁标签 2信息标签；validity: 1有效 2失效，如: [{\"types\":1,\"tag\":\"Scanner\",\"validity\":1}])",
         "queryType": "JSON"
       },
       "info_tags": {
         "type": "string",
         "optional": true,
-        "comment": "人工新增-信息标签(JSON数组，如: [{\"types\":2,\"tag\":\"IDC\",\"validity\":1}])",
+        "comment": "人工新增-信息标签(JSON数组，types: 1威胁标签 2信息标签；validity: 1有效 2失效，如: [{\"types\":2,\"tag\":\"IDC\",\"validity\":1}])",
         "queryType": "JSON"
       },
       "invalid_tags": {

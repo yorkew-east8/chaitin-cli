@@ -96,7 +96,7 @@
       "configs": {
         "type": "string",
         "optional": false,
-        "comment": "封禁配置（JSON 数组，如: [{\"ips\":[\"1.2.3.4\"],\"dev_ids\":[\"dev-id\"],\"expire_at\":253402271999000,\"type\":\"black\",\"remark\":\"\"}]）",
+        "comment": "封禁配置（JSON 数组，type: type_add_black_forever永久黑名单 type_add_black_expire限时黑名单 type_add_block_pool封禁池；如: [{\"ips\":[\"1.2.3.4\"],\"dev_ids\":[\"dev-id\"],\"expire_at\":253402271999000,\"type\":\"type_add_black_forever\",\"remark\":\"\"}]）",
         "queryType": "JSON"
       },
       "alarm_id": {
@@ -197,13 +197,13 @@
       "filter.type": {
         "type": "string",
         "optional": true,
-        "comment": "类型过滤（UintQuery JSON，如: [{\"oper\":\"=\",\"target\":1}]）",
+        "comment": "类型过滤: 1普通IP 2IP掩码 3IP段（UintQuery JSON，如: [{\"oper\":\"=\",\"target\":1}]）",
         "queryType": "UintQuery"
       },
       "filter.expire_state": {
         "type": "string",
         "optional": true,
-        "comment": "过期状态过滤"
+        "comment": "过期状态过滤: permanent永久 expired已过期 unexpired未过期；多个用英文逗号分隔"
       },
       "filter.organization_id": {
         "type": "integer",
@@ -221,7 +221,7 @@
       "configs": {
         "type": "string",
         "optional": false,
-        "comment": "白名单配置（JSON 数组，如: [{\"ips\":[\"1.2.3.4\"],\"dev_ids\":[\"dev-id\"],\"expire_at\":1781501714000,\"type\":\"white\",\"remark\":\"\"}]）",
+        "comment": "白名单配置（JSON 数组，type: type_add_white_list加入白名单；如: [{\"ips\":[\"1.2.3.4\"],\"dev_ids\":[\"dev-id\"],\"expire_at\":1781501714000,\"type\":\"type_add_white_list\",\"remark\":\"\"}]）",
         "queryType": "JSON"
       }
     },

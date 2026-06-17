@@ -143,7 +143,7 @@
       "level": {
         "type": "string",
         "optional": true,
-        "comment": "告警等级过滤（JSON，如: [{\"eq\":\"critical\"}]）",
+        "comment": "告警等级过滤: CRITICAL紧急 MAJOR重要 MINOR次要 WARNING提示（JSON，如: [{\"eq\":\"CRITICAL\"}]）",
         "queryType": "StringQuery"
       },
       "module": {
@@ -181,7 +181,7 @@
       "category": {
         "type": "string",
         "optional": false,
-        "comment": "执行器类型（必填）"
+        "comment": "执行器类型（必填，传执行器的 category 字符串；接口返回当前已注册执行器列表）"
       }
     },
     "reply": {}

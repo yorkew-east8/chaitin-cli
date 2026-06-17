@@ -52,7 +52,7 @@
       "vuln_level": {
         "type": "string",
         "optional": true,
-        "comment": "漏洞等级 (JSON, 如: [{\"oper\":\"=\",\"target\":3}])",
+        "comment": "漏洞等级: -1未知 0无威胁 1低危 2中危 3高危 4超危 (JSON, 如: [{\"oper\":\"=\",\"target\":3}])",
         "queryType": "IntQuery"
       },
       "vuln_ip": {
@@ -88,13 +88,13 @@
       "vuln_dispose_type": {
         "type": "string",
         "optional": true,
-        "comment": "处置方式 (JSON, 如: [{\"oper\":\"=\",\"target\":1}])",
+        "comment": "处置方式: 1直接处置 2邮件通知 3工单 4复测 5短信通知 6Webhook通知 7创建漏洞 8更新漏洞 9重新合并 (JSON, 如: [{\"oper\":\"=\",\"target\":1}])",
         "queryType": "UintQuery"
       },
       "vuln_status": {
         "type": "string",
         "optional": true,
-        "comment": "漏洞状态 (JSON, 如: [{\"oper\":\"=\",\"target\":1}])",
+        "comment": "漏洞状态: 1待处理 2验证中 3修复中 4复测中 5误报 6忽略 7修复完成 (JSON, 如: [{\"oper\":\"=\",\"target\":1}])",
         "queryType": "UintQuery"
       },
       "vuln_tag": {
@@ -284,7 +284,7 @@
       "vuln_level": {
         "type": "integer",
         "optional": true,
-        "comment": "漏洞等级"
+        "comment": "漏洞等级: -1未知 0无威胁 1低危 2中危 3高危 4超危"
       },
       "vuln_weight": {
         "type": "string",
@@ -513,7 +513,7 @@
       "vuln_level": {
         "type": "string",
         "optional": true,
-        "comment": "漏洞等级 (JSON, 如: [{\"oper\":\"=\",\"target\":3}])",
+        "comment": "漏洞等级: -1未知 0无威胁 1低危 2中危 3高危 4超危 (JSON, 如: [{\"oper\":\"=\",\"target\":3}])",
         "queryType": "IntQuery"
       },
       "vuln_url": {
@@ -549,13 +549,13 @@
       "vuln_dispose_type": {
         "type": "string",
         "optional": true,
-        "comment": "处置方式 (JSON, 如: [{\"oper\":\"=\",\"target\":1}])",
+        "comment": "处置方式: 1直接处置 2邮件通知 3工单 4复测 5短信通知 6Webhook通知 7创建漏洞 8更新漏洞 9重新合并 (JSON, 如: [{\"oper\":\"=\",\"target\":1}])",
         "queryType": "UintQuery"
       },
       "vuln_status": {
         "type": "string",
         "optional": true,
-        "comment": "漏洞状态 (JSON, 如: [{\"oper\":\"=\",\"target\":1}])",
+        "comment": "漏洞状态: 1待处理 2验证中 3修复中 4复测中 5误报 6忽略 7修复完成 (JSON, 如: [{\"oper\":\"=\",\"target\":1}])",
         "queryType": "UintQuery"
       },
       "vuln_tag": {
@@ -745,7 +745,7 @@
       "vuln_level": {
         "type": "integer",
         "optional": true,
-        "comment": "漏洞等级"
+        "comment": "漏洞等级: -1未知 0无威胁 1低危 2中危 3高危 4超危"
       },
       "vuln_weight": {
         "type": "string",
