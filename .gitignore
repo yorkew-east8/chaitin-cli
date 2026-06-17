@@ -28,6 +28,7 @@ cover.out
 .settings/
 
 .codex
+.codegraph/
 
 docs/
 
