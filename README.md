@@ -11,7 +11,7 @@
 
 ## 项目简介
 
-`chaitin-cli` 是面向长亭安全产品的统一命令行工具，目标是在一个二进制中提供多产品的常用运维、查询和自动化能力。它解决了不同产品 API、认证方式和输出格式分散的问题，让开发者、运维人员和 AI Agent 可以用一致的方式管理 SafeLine、X-Ray、CloudWalker、Veinmind、T-Answer、DDR 等产品。
+`chaitin-cli` 是面向长亭安全产品的统一命令行工具，目标是在一个二进制中提供多产品的常用运维、查询和自动化能力。它解决了不同产品 API、认证方式和输出格式分散的问题，让开发者、运维人员和 AI Agent 可以用一致的方式管理 SafeLine、X-Ray、Cloud Atlas、CloudWalker、Veinmind、T-Answer、DDR 等产品。
 
 核心能力：
 
@@ -43,6 +43,7 @@ npx skills add chaitin/chaitin-cli
 
 - "帮我查看 SafeLine 最近的攻击日志"
 - "在 X-Ray 中创建一个扫描任务"
+- "列出 Cloud Atlas 中待处理的漏洞"
 - "列出 CloudWalker 中的漏洞事件"
 - "在 CodeForce 中创建降噪任务并查看结果"
 
@@ -83,9 +84,10 @@ npx skills add chaitin/chaitin-cli
 | `safeline-3` | SafeLine-3 保护对象、策略、ACL、日志、监控、系统和网络管理 |
 | `safeline-ce` | SafeLine CE 站点、规则、日志、证书和增强防护管理 |
 | `xray` | X-Ray 扫描任务、资产、漏洞、报告和系统配置管理 |
+| `cloudAtlas` | Cloud Atlas 资产、暴露面、风险、情报、策略和任务管理 |
 | `cloudwalker` | CloudWalker CWPP 事件、资产、漏洞、防护策略和系统管理 |
 | `veinmind` | CloudWalker CNAPP 容器、镜像、逃逸防护管理 |
-| `tanswer` | T-Answer 防火墙、白名单和阻断规则管理 |
+| `tanswer` | T-Answer 流量检测、白名单和阻断规则管理 |
 | `ddr` | DDR API Token 和连接配置辅助能力 |
 | `apisec` | APISec API 资产、站点、应用、访问者、数据安全和风险事件管理 |
 | `dsensor` | D-Sensor 谛听安全监控、探针、蜜罐、告警和威胁日志管理 |
@@ -99,6 +101,11 @@ npx skills add chaitin/chaitin-cli
 将各产品的连接信息写入 `./config.yaml`：
 
 ```yaml
+cloudAtlas:
+  url: https://cloud-atlas.example.com
+  token: YOUR_TOKEN
+  space_id: YOUR_SPACE_ID
+
 cloudwalker:
   url: https://cloudwalker.example.com/rpc
   api_key: YOUR_API_KEY
@@ -145,6 +152,9 @@ codeforce:
 也可以把同样的配置放到环境变量或本地 `.env` 文件中。变量命名规则为 `<PRODUCT>_<FIELD>`：
 
 ```text
+cloudAtlas.url       -> CLOUD_ATLAS_URL
+cloudAtlas.token     -> CLOUD_ATLAS_TOKEN
+cloudAtlas.space_id  -> CLOUD_ATLAS_SPACE_ID
 cloudwalker.url      -> CLOUDWALKER_URL
 cloudwalker.api_key  -> CLOUDWALKER_API_KEY
 tanswer.url          -> TANSWER_URL
@@ -172,6 +182,22 @@ safeline-3.api_token -> SAFELINE_3_API_TOKEN
 safeline.url         -> SAFELINE_URL
 safeline.api_key     -> SAFELINE_API_KEY
 ```
+
+### Cloud Atlas
+
+Cloud Atlas 命令由内置 OpenAPI Schema 生成，认证使用 `TOKEN` 请求头。配置 `cloudAtlas.space_id` 后，查询命令会自动把它作为默认空间 ID；也可以通过根命令参数 `--space-id` 指定默认空间，或在具体子命令中用 `--space` 覆盖。
+
+```bash
+export CLOUD_ATLAS_URL=https://cloud-atlas.example.com
+export CLOUD_ATLAS_TOKEN=YOUR_TOKEN
+export CLOUD_ATLAS_SPACE_ID=YOUR_SPACE_ID
+
+chaitin-cli cloudAtlas asset ip list --status valid --page 1 --size 20 --output json
+chaitin-cli cloudAtlas exposure website list --status valid --page 1 --size 20 --output json
+chaitin-cli cloudAtlas risk vulnerability list --status open --page 1 --size 20 --output json
+```
+
+常用命令分组包括 `asset`、`exposure`、`risk`、`intelligence`、`strategy` 和 `task`。完整参数以 `chaitin-cli cloudAtlas --help` 及对应子命令的 `--help` 为准。
 
 APISec 常用查询不需要手动传内部 `scope`，优先使用语义化命令：
 
