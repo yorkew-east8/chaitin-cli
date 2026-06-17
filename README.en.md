@@ -211,14 +211,14 @@ Use root-level `--dry-run` for commands that support dry-run:
 
 ```bash
 chaitin-cli --dry-run xray plan PostPlanFilter --filterPlan.limit=10
-chaitin-cli --dry-run cosmos asset save-host-asset --ip 10.0.0.1/32 --name demo-host --organization_id 1 --category_ids '[{"id":41,"name":"Linux"}]' --group_id 1
+chaitin-cli --dry-run cosmos asset save-host-asset --ip 10.0.0.1/32 --name demo-host --organization_id 1 --asset_ip_type 1 --category_ids '[{"id":41,"name":"Linux"}]' --group_id 1
 ```
 
 ### Cosmos / AISOC
 
 Full module documentation lives in [`products/cosmos/README.md`](products/cosmos/README.md).
 
-Cosmos generic JSON-RPC commands cover alarms, logs, intelligence, IP blocks, assets, notices, ops, SOAR, and vulnerabilities. Root-level `--dry-run` prints a redacted request summary without sending the request. Saving a host asset usually needs both category and group parameters on current deployments:
+Cosmos generic JSON-RPC commands cover alarms, logs, intelligence, IP blocks, assets, notices, ops, SOAR, and vulnerabilities. Root-level `--dry-run` prints a redacted request summary without sending the request. Saving a host asset usually needs asset type, category, and group parameters on current deployments. `--asset_ip_type` currently uses `1` for a real IP and `2` for a virtual IP:
 
 ```bash
 chaitin-cli cosmos asset search-host-asset --count 20 --offset 0 --raw

@@ -215,7 +215,7 @@ chaitin-cli safeline-3 raw request GET /api/v3/license
 
 完整模块文档见 [`products/cosmos/README.md`](products/cosmos/README.md)。
 
-Cosmos 通用 JSON-RPC 命令覆盖告警、日志、情报、封禁、资产、通知、运维、SOAR 和漏洞管理。根级 `--dry-run` 会打印脱敏后的请求摘要，不会发送请求。保存主机资产时，当前后端通常需要资产类型和分组：
+Cosmos 通用 JSON-RPC 命令覆盖告警、日志、情报、封禁、资产、通知、运维、SOAR 和漏洞管理。根级 `--dry-run` 会打印脱敏后的请求摘要，不会发送请求。保存主机资产时，当前后端通常需要资产类型、分类和分组；`--asset_ip_type` 当前取值为 `1` 实际 IP、`2` 虚拟 IP：
 
 ```bash
 chaitin-cli cosmos asset search-host-asset --count 20 --offset 0 --raw
@@ -272,7 +272,7 @@ chaitin-cli -c ./configs/safeline-staging.yaml safeline stats overview
 
 ```bash
 chaitin-cli --dry-run xray plan PostPlanFilter --filterPlan.limit=10
-chaitin-cli --dry-run cosmos asset save-host-asset --ip 10.0.0.1/32 --name demo-host --organization_id 1 --category_ids '[{"id":41,"name":"Linux"}]' --group_id 1
+chaitin-cli --dry-run cosmos asset save-host-asset --ip 10.0.0.1/32 --name demo-host --organization_id 1 --asset_ip_type 1 --category_ids '[{"id":41,"name":"Linux"}]' --group_id 1
 ```
 
 ### CodeInsight 项目与任务

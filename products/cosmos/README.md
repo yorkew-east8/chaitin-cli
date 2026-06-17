@@ -105,7 +105,7 @@ chaitin-cli cosmos asset search-host-asset \
   --offset 0
 ```
 
-预览保存主机资产请求：
+预览保存主机资产请求。`--asset_ip_type` 当前取值为 `1` 实际 IP、`2` 虚拟 IP：
 
 ```bash
 chaitin-cli --dry-run cosmos asset save-host-asset \
@@ -128,10 +128,10 @@ chaitin-cli cosmos alarm get-alarm-list \
   --raw
 ```
 
-查询告警详情：
+查询告警详情。先从告警列表返回值中获取真实 `id`；`created_at` 为可选分区键，使用列表返回的 `created_at` 转为毫秒整数后可加速查询：
 
 ```bash
-chaitin-cli cosmos alarm get-alarm-info --id ALARM_ID --created_at 1717200000000
+chaitin-cli cosmos alarm get-alarm-info --id ALARM_ID --created_at CREATED_AT_MS --raw
 ```
 
 查询安全日志：
@@ -145,10 +145,10 @@ chaitin-cli cosmos log search-log-list \
   --offset 0
 ```
 
-新增 IP 情报：
+预览新增 IP 情报请求。去掉根级 `--dry-run` 后会真实写入情报：
 
 ```bash
-chaitin-cli cosmos intelligence create-ip-ioc \
+chaitin-cli --dry-run cosmos intelligence create-ip-ioc \
   --ip_ioc.ip 192.0.2.10 \
   --ip_ioc.intel_type ipv4 \
   --ip_ioc.threat_type ATTACK_IP \
@@ -166,21 +166,23 @@ chaitin-cli --dry-run cosmos ip-block create-black-ip \
   --raw
 ```
 
-查询 SOAR 剧本并触发通用剧本：
+查询 SOAR 剧本并预览触发通用剧本。SOAR 查询依赖目标环境的 SOAR 服务状态；触发剧本前先将 `SOAR_UUID` 替换为真实剧本 ID：
 
 ```bash
 chaitin-cli cosmos analysis get-soar-playbook-list --types 1 --ai_call 1
 
-chaitin-cli cosmos alarm trigger-playbook-general \
+chaitin-cli --dry-run cosmos alarm trigger-playbook-general \
   --soar_id SOAR_UUID \
   --params '{"title":"告警标题","msg":"通知内容"}'
 ```
 
-查询集群节点 CPU 平均使用率。运维监控类接口中的 `start` / `end` 使用 Unix 秒级时间戳：
+查询集群节点 CPU 平均使用率。先查询节点信息，选择目标环境中真实存在的节点 IP；运维监控类接口中的 `start` / `end` 使用 Unix 秒级时间戳，并依赖目标环境有对应监控数据：
 
 ```bash
+chaitin-cli cosmos extra-setting get-node-info --raw
+
 chaitin-cli cosmos ops bigdata-cpu-avg \
-  --ip 10.2.37.87 \
+  --ip NODE_IP \
   --start 1781515764 \
   --end 1781519364
 ```
