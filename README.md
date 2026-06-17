@@ -91,6 +91,7 @@ npx skills add chaitin/chaitin-cli
 | `dsensor` | D-Sensor 谛听安全监控、探针、蜜罐、告警和威胁日志管理 |
 | `codeinsight` | CodeInsight 项目、代码托管配置、扫描任务和报告导出管理 |
 | `codeforce` | CodeForce 项目、项目 AI 员工、AI 开发任务、原生审计、降噪、代码包、仓库和 Git 授权配置管理 |
+| `cosmos` | Cosmos / AISOC 告警、日志、情报、封禁、资产、通知、运维、SOAR 和漏洞管理 |
 
 根命令负责配置加载、产品命令注册和 BusyBox 风格调用分发；各产品目录负责自己的命令、参数、配置解析和 API 调用逻辑。
 
@@ -210,9 +211,11 @@ chaitin-cli safeline-3 raw request GET /api/v3/license
 
 创建、更新、删除等复杂请求优先使用实体命令的语义参数；复杂嵌套结构可使用对应的 `--payload-file`、`--application-file` 等文件入口。`raw request` 是兜底入口，可调用未封装的 `/api/v3/...` 接口。
 
-### Cosmos / AISOC 资产接口
+### Cosmos / AISOC
 
-Cosmos 通用 JSON-RPC 命令支持根级 `--dry-run`，会打印脱敏后的请求摘要，不会发送请求。保存主机资产时，当前后端通常需要资产类型和分组：
+完整模块文档见 [`products/cosmos/README.md`](products/cosmos/README.md)。
+
+Cosmos 通用 JSON-RPC 命令覆盖告警、日志、情报、封禁、资产、通知、运维、SOAR 和漏洞管理。根级 `--dry-run` 会打印脱敏后的请求摘要，不会发送请求。保存主机资产时，当前后端通常需要资产类型和分组：
 
 ```bash
 chaitin-cli cosmos asset search-host-asset --count 20 --offset 0 --raw
