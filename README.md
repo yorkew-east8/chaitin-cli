@@ -102,7 +102,7 @@ npx skills add chaitin/chaitin-cli
 
 ```yaml
 cloudAtlas:
-  url: https://cloud-atlas.example.com
+  url: https://cloud-atlas.example.com/openapi
   token: YOUR_TOKEN
   space_id: YOUR_SPACE_ID
 
@@ -188,7 +188,7 @@ safeline.api_key     -> SAFELINE_API_KEY
 Cloud Atlas 命令由内置 OpenAPI Schema 生成，认证使用 `TOKEN` 请求头。配置 `cloudAtlas.space_id` 后，查询命令会自动把它作为默认空间 ID；也可以通过根命令参数 `--space-id` 指定默认空间，或在具体子命令中用 `--space` 覆盖。
 
 ```bash
-export CLOUD_ATLAS_URL=https://cloud-atlas.example.com
+export CLOUD_ATLAS_URL=https://cloud-atlas.example.com/openapi
 export CLOUD_ATLAS_TOKEN=YOUR_TOKEN
 export CLOUD_ATLAS_SPACE_ID=YOUR_SPACE_ID
 

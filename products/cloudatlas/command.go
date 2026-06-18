@@ -30,7 +30,7 @@ Authentication uses the TOKEN HTTP header.
 
 Config example:
   cloudAtlas:
-    url: https://your-cloud-atlas.example
+    url: https://your-cloud-atlas.example/openapi
     token: your-token
     space_id: your-space-id`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
