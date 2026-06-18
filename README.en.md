@@ -90,6 +90,7 @@ After installation, simply describe your needs to the AI agent, for example:
 | `dsensor` | D-Sensor security monitoring, agent, honeypot, alarm, and threat log management |
 | `codeinsight` | CodeInsight project, repository configuration, scan task, and report export management |
 | `codeforce` | CodeForce project, project AI employee, AI dev task, native audit, denoise, code package, repository, and Git auth management |
+| `cosmos` | Cosmos / AISOC alarm, log, intelligence, IP block, asset, notice, ops, SOAR, and vulnerability management |
 
 The root command handles configuration loading, product command registration, and BusyBox-style dispatch. Each product directory owns its commands, flags, configuration decoding, and API calls.
 
@@ -136,6 +137,10 @@ codeforce:
   url: https://codeforce.example.com
   access_token: YOUR_ACCESS_TOKEN
   account_type: admin
+
+cosmos:
+  url: https://cosmos.example.com
+  api_key: YOUR_JWT_BEARER_TOKEN
 ```
 You can also put the same keys into environment variables or a local `.env` file. Variable names follow `<PRODUCT>_<FIELD>`:
 
@@ -158,6 +163,8 @@ codeinsight.access_token -> CODEINSIGHT_ACCESS_TOKEN or CODEINSIGHT_TOKEN
 codeforce.url        -> CODEFORCE_URL
 codeforce.access_token -> CODEFORCE_ACCESS_TOKEN or CODEFORCE_API_KEY
 codeforce.account_type -> CODEFORCE_ACCOUNT_TYPE
+cosmos.url           -> COSMOS_URL
+cosmos.api_key       -> COSMOS_API_KEY
 safeline-ce.url      -> SAFELINE_CE_URL
 safeline-ce.api_key  -> SAFELINE_CE_API_KEY
 safeline-3.url       -> SAFELINE_3_URL
@@ -204,6 +211,26 @@ Use root-level `--dry-run` for commands that support dry-run:
 
 ```bash
 chaitin-cli --dry-run xray plan PostPlanFilter --filterPlan.limit=10
+chaitin-cli --dry-run cosmos asset save-host-asset --ip 10.0.0.1/32 --name demo-host --organization_id 1 --asset_ip_type 1 --category_ids '[{"id":41,"name":"Linux"}]' --group_id 1
+```
+
+### Cosmos / AISOC
+
+Full module documentation lives in [`products/cosmos/README.md`](products/cosmos/README.md).
+
+Cosmos generic JSON-RPC commands cover alarms, logs, intelligence, IP blocks, assets, notices, ops, SOAR, and vulnerabilities. Root-level `--dry-run` prints a redacted request summary without sending the request. Saving a host asset usually needs asset type, category, and group parameters on current deployments. `--asset_ip_type` currently uses `1` for a real IP and `2` for a virtual IP:
+
+```bash
+chaitin-cli cosmos asset search-host-asset --count 20 --offset 0 --raw
+
+chaitin-cli --dry-run cosmos asset save-host-asset \
+  --ip 10.0.0.1/32 \
+  --name demo-host \
+  --organization_id 1 \
+  --asset_ip_type 1 \
+  --category_ids '[{"id":41,"name":"Linux"}]' \
+  --group_id 1 \
+  --raw
 ```
 
 ### CodeInsight Projects And Tasks
