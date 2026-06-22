@@ -98,6 +98,24 @@ func TestRootHelpIncludesCodeForce(t *testing.T) {
 	}
 }
 
+func TestRootHelpIncludesMonkeyScan(t *testing.T) {
+	app, err := newApp()
+	if err != nil {
+		t.Fatalf("newApp() error = %v", err)
+	}
+
+	var out strings.Builder
+	app.root.SetOut(&out)
+	app.root.SetErr(&out)
+	app.root.SetArgs([]string{"--help"})
+	if err := app.root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if !strings.Contains(out.String(), "monkeyscan") {
+		t.Fatalf("root help missing monkeyscan:\n%s", out.String())
+	}
+}
+
 func TestEnsureRuntimeConfigLoaded(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "custom.yaml")
