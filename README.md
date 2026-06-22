@@ -77,23 +77,25 @@ npx skills add chaitin/chaitin-cli
 
 ## 功能模块
 
-| 模块 | 说明 |
-| --- | --- |
-| `chaitin` | 示例和基础命令 |
-| `safeline` | SafeLine WAF 站点、策略、ACL、攻击日志和系统信息管理 |
-| `safeline-3` | SafeLine-3 保护对象、策略、ACL、日志、监控、系统和网络管理 |
-| `safeline-ce` | SafeLine CE 站点、规则、日志、证书和增强防护管理 |
-| `xray` | X-Ray 扫描任务、资产、漏洞、报告和系统配置管理 |
-| `cloudAtlas` | Cloud Atlas 资产、暴露面、风险、情报、策略和任务管理 |
-| `cloudwalker` | CloudWalker CWPP 事件、资产、漏洞、防护策略和系统管理 |
-| `veinmind` | CloudWalker CNAPP 容器、镜像、逃逸防护管理 |
-| `tanswer` | T-Answer 流量检测、白名单和阻断规则管理 |
-| `ddr` | DDR API Token 和连接配置辅助能力 |
-| `apisec` | APISec API 资产、站点、应用、访问者、数据安全和风险事件管理 |
-| `dsensor` | D-Sensor 谛听安全监控、探针、蜜罐、告警和威胁日志管理 |
-| `codeinsight` | CodeInsight 项目、代码托管配置、扫描任务和报告导出管理 |
-| `codeforce` | CodeForce 项目、项目 AI 员工、AI 开发任务、原生审计、降噪、代码包、仓库和 Git 授权配置管理 |
-| `cosmos` | Cosmos / AISOC 告警、日志、情报、封禁、资产、通知、运维、SOAR 和漏洞管理 |
+| 模块            | 中文名                    | 说明                                                       |
+| ------------- | ---------------------- | -------------------------------------------------------- |
+| `chaitin`     | 主模块                    | 示例和基础命令                                                  |
+| `safeline`    | 下一代Web应用防火墙（雷池20系列）    | SafeLine WAF 站点、策略、ACL、攻击日志和系统信息管理                       |
+| `safeline-3`  | 下一代Web应用防火墙（雷池30系列）    | SafeLine-3 保护对象、策略、ACL、日志、监控、系统和网络管理                     |
+| `safeline-ce` | 雷池WAF社区版               | SafeLine CE 站点、规则、日志、证书和增强防护管理                           |
+| `xray`        | 风险评估系统（洞鉴）             | X-Ray 扫描任务、资产、漏洞、报告和系统配置管理                               |
+| `cloudAtlas`  | 资产暴露面运营管理（云图）          | Cloud Atlas 资产、暴露面、风险、情报、策略和任务管理                         |
+| `cloudwalker` | 云工作负载保护平台（牧云-主机安全）     | CloudWalker CWPP 事件、资产、漏洞、防护策略和系统管理                      |
+| `veinmind`    | 云工作负载保护平台（牧云-容器安全）     | CloudWalker CNAPP 容器、镜像、逃逸防护管理                           |
+| `tanswer`     | 流量威胁检测响应系统（全悉）         | T-Answer 流量检测、白名单和阻断规则管理                                 |
+| `ddr`         | 终端统一管控与安全检测响应平台（长亭DDR） | DDR API Token 和连接配置辅助能力                                  |
+| `apisec`      | 高级API安全系统（APISEC）      | APISec API 资产、站点、应用、访问者、数据安全和风险事件管理                      |
+| `dsensor`     | 主动威胁欺骗防御系统（谛听）         | D-Sensor 谛听安全监控、探针、蜜罐、告警和威胁日志管理                          |
+| `codeinsight` | 智能静态应用程序安全测试系统（慧鉴）     | CodeInsight 项目、代码托管配置、扫描任务和报告导出管理                        |
+| `codeforce`   | 智能开发与安全一体化平台（码力）       | CodeForce 项目、项目 AI 员工、AI 开发任务、原生审计、降噪、代码包、仓库和 Git 授权配置管理 |
+| `cosmos`      | 安全分析与运营管理平台（万象）        | Cosmos / AISOC 告警、日志、情报、封禁、资产、通知、运维、SOAR 和漏洞管理           |
+
+
 
 根命令负责配置加载、产品命令注册和 BusyBox 风格调用分发；各产品目录负责自己的命令、参数、配置解析和 API 调用逻辑。
 
