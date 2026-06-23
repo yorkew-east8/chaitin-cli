@@ -33,6 +33,9 @@ func (c *client) Status(ctx context.Context) (*statusResponse, error) {
 	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/cli/status", nil, &out); err != nil {
 		return nil, err
 	}
+	if out.Ready && !out.ReviewReady {
+		out.ReviewReady = true
+	}
 	return &out, nil
 }
 

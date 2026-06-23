@@ -100,6 +100,24 @@ func TestClientHandlesStatusAndAPIError(t *testing.T) {
 	}
 }
 
+func TestClientStatusFallsBackToReadyCompatibilityField(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"authenticated": true,
+			"ready":         true,
+		})
+	}))
+	defer server.Close()
+
+	status, err := newClient(server.URL, "secret").Status(t.Context())
+	if err != nil {
+		t.Fatalf("Status() error = %v", err)
+	}
+	if !status.Ready || !status.ReviewReady {
+		t.Fatalf("Status() = %+v, want ready and review_ready true", status)
+	}
+}
+
 func TestAuthSetKeyAndClearPersistConfig(t *testing.T) {
 	oldCfg, oldConfigPath, oldReadSecret := runtimeCfg, runtimeConfigPath, readSecret
 	t.Cleanup(func() {
