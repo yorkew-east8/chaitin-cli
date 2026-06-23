@@ -51,7 +51,7 @@ func writeReviewMarkdown(path string, detail *reviewDetail) error {
 	fmt.Fprintf(&b, "- 问题数量: %d\n", len(detail.Findings))
 	fmt.Fprintf(&b, "- 评论数量: %d\n", len(detail.Comments))
 	if detail.Run.ErrorMessage != "" {
-		fmt.Fprintf(&b, "- 错误信息: %s\n", detail.Run.ErrorMessage)
+		fmt.Fprintf(&b, "- 错误信息: %s\n", sanitizeErrorMessage(detail.Run.ErrorMessage))
 	}
 	b.WriteString("\n## 问题列表\n\n")
 	if len(detail.Findings) == 0 {
@@ -82,7 +82,7 @@ func writeReviewMarkdown(path string, detail *reviewDetail) error {
 			b.WriteString("\n\n")
 		}
 		b.WriteString("**推荐修复 Diff**\n\n```diff\n")
-		b.WriteString(firstNonEmpty(finding.RecommendedDiff, finding.FixDiff, finding.SuggestedPatch, "无"))
+		b.WriteString(firstNonEmpty(finding.SuggestedDiff, finding.RecommendedDiff, finding.FixDiff, finding.SuggestedPatch, "无"))
 		b.WriteString("\n```\n\n")
 	}
 	b.WriteString("## Comments\n\n")

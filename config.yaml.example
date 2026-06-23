@@ -54,3 +54,7 @@ codeforce:
 cosmos:
   url: ""
   api_key: ""
+
+monkeyscan:
+  url: ""
+  key: ""

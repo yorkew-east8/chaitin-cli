@@ -133,12 +133,22 @@ func waitReviewResult(ctx context.Context, client *client, runID string) (*revie
 }
 
 func isTerminalReviewStatus(runStatus, groupStatus string) bool {
-	switch strings.ToLower(runStatus) {
-	case "completed", "failed", "skipped":
+	return isSuccessfulReviewStatus(runStatus, groupStatus) || isFailedReviewStatus(runStatus, groupStatus)
+}
+
+func isSuccessfulReviewStatus(runStatus, groupStatus string) bool {
+	if strings.EqualFold(runStatus, "completed") || strings.EqualFold(groupStatus, "success") {
 		return true
 	}
-	switch strings.ToLower(groupStatus) {
-	case "success", "failed":
+	return false
+}
+
+func isFailedReviewStatus(runStatus, groupStatus string) bool {
+	switch strings.ToLower(runStatus) {
+	case "failed", "skipped":
+		return true
+	}
+	if strings.EqualFold(groupStatus, "failed") {
 		return true
 	}
 	return false

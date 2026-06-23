@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -107,6 +108,14 @@ func diffForMode(ctx context.Context, repoRoot, mode, base, head string) (string
 		return "", nil, fmt.Errorf("采集 %s 文件列表失败: %w", mode, err)
 	}
 	files := parseChangedFiles(nameStatus, numstat, splitPatches(diff))
+	if mode == "uncommitted" {
+		untrackedDiff, untrackedFiles, err := collectUntrackedFiles(ctx, repoRoot)
+		if err != nil {
+			return "", nil, err
+		}
+		diff = joinDiffs(diff, untrackedDiff)
+		files = mergeFiles(files, untrackedFiles)
+	}
 	return diff, files, nil
 }
 
@@ -126,6 +135,67 @@ func gitOutput(ctx context.Context, dir string, args ...string) (string, error) 
 		return "", err
 	}
 	return string(out), nil
+}
+
+func gitOutputAllowExit(ctx context.Context, dir string, allowed map[int]bool, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", args...)
+	if dir != "" {
+		cmd.Dir = dir
+	}
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && allowed[exitErr.ExitCode()] {
+			return string(out), nil
+		}
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return "", fmt.Errorf("%s", msg)
+		}
+		return "", err
+	}
+	return string(out), nil
+}
+
+func collectUntrackedFiles(ctx context.Context, repoRoot string) (string, []changedFile, error) {
+	raw, err := gitOutput(ctx, repoRoot, "ls-files", "--others", "--exclude-standard", "-z")
+	if err != nil {
+		return "", nil, fmt.Errorf("采集未跟踪文件列表失败: %w", err)
+	}
+	if raw == "" {
+		return "", nil, nil
+	}
+	var patches []string
+	var files []changedFile
+	for _, path := range strings.Split(raw, "\x00") {
+		if path == "" {
+			continue
+		}
+		cleanPath := filepath.ToSlash(path)
+		if isIgnoredLocalReviewPath(cleanPath) {
+			continue
+		}
+		patch, err := gitOutputAllowExit(ctx, repoRoot, map[int]bool{1: true}, "diff", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/", "--no-index", "--", "/dev/null", cleanPath)
+		if err != nil {
+			return "", nil, fmt.Errorf("采集未跟踪文件 %s diff 失败: %w", cleanPath, err)
+		}
+		patches = append(patches, patch)
+		additions, deletions := countPatchChanges(patch)
+		files = append(files, changedFile{
+			Path:      cleanPath,
+			Status:    "added",
+			Additions: additions,
+			Deletions: deletions,
+			Changes:   additions + deletions,
+			Patch:     patch,
+		})
+	}
+	return joinDiffs(patches...), files, nil
+}
+
+func isIgnoredLocalReviewPath(path string) bool {
+	return path == ".monkeyscan" || strings.HasPrefix(path, ".monkeyscan/")
 }
 
 func parseChangedFiles(nameStatus, numstat string, patches map[string]string) []changedFile {
@@ -196,15 +266,38 @@ func splitPatches(diff string) map[string]string {
 		}
 		patch := marker + chunk
 		firstLine, _, _ := strings.Cut(patch, "\n")
-		parts := strings.Fields(firstLine)
-		if len(parts) < 4 {
+		path := diffNewPath(firstLine)
+		if path == "" {
 			continue
 		}
-		path := strings.TrimPrefix(parts[3], "b/")
-		path = strings.Trim(path, "\"")
 		patches[path] = patch
 	}
 	return patches
+}
+
+func diffNewPath(firstLine string) string {
+	const marker = " b/"
+	idx := strings.LastIndex(firstLine, marker)
+	if idx < 0 {
+		return ""
+	}
+	path := strings.TrimSpace(firstLine[idx+len(marker):])
+	return strings.Trim(path, "\"")
+}
+
+func countPatchChanges(patch string) (int, int) {
+	additions, deletions := 0, 0
+	for _, line := range strings.Split(patch, "\n") {
+		switch {
+		case strings.HasPrefix(line, "+++") || strings.HasPrefix(line, "---"):
+			continue
+		case strings.HasPrefix(line, "+"):
+			additions++
+		case strings.HasPrefix(line, "-"):
+			deletions++
+		}
+	}
+	return additions, deletions
 }
 
 func statusName(token string) string {

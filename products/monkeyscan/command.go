@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -252,7 +253,7 @@ func runReview(cmd *cobra.Command, opts reviewScope) error {
 	detail, err := waitReviewResult(cmd.Context(), client, resp.RunID)
 	if err != nil {
 		local.Status = "interrupted"
-		local.ErrorMessage = err.Error()
+		local.ErrorMessage = sanitizeErrorMessage(err.Error())
 		local.UpdatedAt = nowFunc()
 		_ = writeLocalStatus(runDir, local)
 		return fmt.Errorf("任务已提交但结果获取中断，请稍后运行 monkeyscan review status --run %s: %w", clientRunID, err)
@@ -307,12 +308,15 @@ func finishReview(cmd *cobra.Command, runDir, reviewPath string, local localStat
 	local.RunID = firstNonEmpty(local.RunID, detail.Run.ID)
 	local.TaskGroupID = firstNonEmpty(local.TaskGroupID, detail.Run.TaskGroupID)
 	local.ReviewPath = reviewPath
-	local.ErrorMessage = detail.Run.ErrorMessage
+	local.ErrorMessage = sanitizeErrorMessage(detail.Run.ErrorMessage)
 	local.UpdatedAt = nowFunc()
 	if err := writeLocalStatus(runDir, local); err != nil {
 		return err
 	}
 	printReviewSummary(cmd, detail, reviewPath)
+	if isFailedReviewStatus(detail.Run.Status, detail.Run.TaskGroupStatus) {
+		return fmt.Errorf("Review 任务失败，结果已写入 %s", reviewPath)
+	}
 	return nil
 }
 
@@ -414,4 +418,24 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+var (
+	apiKeyPattern = regexp.MustCompile(`(?i)(msk_(?:live|test)_[A-Za-z0-9_-]+|bearer\s+[A-Za-z0-9._~+/=-]+|api[_-]?key["'\s:=]+[A-Za-z0-9._~+/=-]+|token["'\s:=]+[A-Za-z0-9._~+/=-]+)`)
+	urlPattern    = regexp.MustCompile(`https?://[^\s"'<>]+`)
+)
+
+func sanitizeErrorMessage(message string) string {
+	message = strings.TrimSpace(message)
+	if message == "" {
+		return ""
+	}
+	message = apiKeyPattern.ReplaceAllString(message, "[redacted-secret]")
+	message = urlPattern.ReplaceAllString(message, "[redacted-url]")
+	message = strings.Join(strings.Fields(message), " ")
+	const maxLen = 500
+	if len(message) > maxLen {
+		message = message[:maxLen] + "..."
+	}
+	return message
 }

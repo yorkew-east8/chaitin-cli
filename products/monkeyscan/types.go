@@ -106,6 +106,7 @@ type reviewFinding struct {
 	Location         findingLocation `json:"location"`
 	ProblemCode      string          `json:"problem_code"`
 	Recommendation   string          `json:"recommendation"`
+	SuggestedDiff    string          `json:"suggested_diff"`
 	RecommendedDiff  string          `json:"recommended_diff"`
 	FixDiff          string          `json:"fix_diff"`
 	SuggestedPatch   string          `json:"suggested_patch"`

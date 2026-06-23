@@ -197,6 +197,41 @@ func TestWriteReviewMarkdownIncludesFallbackDiff(t *testing.T) {
 	}
 }
 
+func TestWriteReviewMarkdownPrefersSuggestedDiffAndSanitizesError(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "review.md")
+	detail := &reviewDetail{
+		Run: reviewRun{
+			ID:             "run-1",
+			RepositoryName: "acme/repo",
+			Status:         "failed",
+			ErrorMessage:   "failed with msk_test_SAMPLE at http://203.0.113.10:8080/internal",
+		},
+		Findings: []reviewFinding{{
+			Title:           "问题",
+			SuggestedDiff:   "diff --git a/a b/a\n+secure\n",
+			RecommendedDiff: "legacy diff",
+		}},
+	}
+	if err := writeReviewMarkdown(path, detail); err != nil {
+		t.Fatalf("writeReviewMarkdown() error = %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	got := string(data)
+	for _, want := range []string{"diff --git a/a b/a", "[redacted-secret]", "[redacted-url]"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("review.md missing %q:\n%s", want, got)
+		}
+	}
+	for _, leaked := range []string{"legacy diff", "msk_test_SAMPLE", "203.0.113.10"} {
+		if strings.Contains(got, leaked) {
+			t.Fatalf("review.md leaked %q:\n%s", leaked, got)
+		}
+	}
+}
+
 func TestRunReviewDryRunDoesNotRequireKeyOrHTTP(t *testing.T) {
 	oldCfg, oldDryRun := runtimeCfg, dryRun
 	t.Cleanup(func() {
@@ -303,6 +338,108 @@ func TestRunReviewCreatesResultFiles(t *testing.T) {
 	statusMatches, _ := filepath.Glob(filepath.Join(repo, reviewsDir, "*", "status.json"))
 	if len(statusMatches) != 1 {
 		t.Fatalf("status.json matches = %v", statusMatches)
+	}
+}
+
+func TestRunReviewFailedResultReturnsErrorAndSanitizesStatus(t *testing.T) {
+	oldCfg, oldDryRun, oldPollInterval, oldPollTimeout := runtimeCfg, dryRun, pollInterval, pollTimeout
+	t.Cleanup(func() {
+		runtimeCfg = oldCfg
+		dryRun = oldDryRun
+		pollInterval = oldPollInterval
+		pollTimeout = oldPollTimeout
+	})
+	pollInterval = time.Millisecond
+	pollTimeout = time.Second
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/cli/status":
+			_ = json.NewEncoder(w).Encode(statusResponse{Authenticated: true, ReviewReady: true})
+		case "/api/v1/cli/reviews/diff":
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(diffReviewResponse{RunID: "run-1", TaskGroupID: "group-1", Status: "created"})
+		case "/api/v1/cli/reviews/run-1":
+			_ = json.NewEncoder(w).Encode(reviewDetail{
+				Run: reviewRun{
+					ID:              "run-1",
+					RepositoryName:  "acme/repo",
+					Status:          "failed",
+					TaskGroupStatus: "failed",
+					ErrorMessage:    "failed with token=secret at http://203.0.113.10:8080",
+				},
+			})
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	runtimeCfg = Config{URL: server.URL, Key: "key"}
+
+	repo := initGitRepo(t)
+	writeFile(t, filepath.Join(repo, "README.md"), "hello\nchanged\n")
+
+	wd, _ := os.Getwd()
+	t.Cleanup(func() { _ = os.Chdir(wd) })
+	if err := os.Chdir(repo); err != nil {
+		t.Fatalf("Chdir() error = %v", err)
+	}
+
+	cmd := NewCommand()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"review", "--type", "uncommitted"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "Review 任务失败") {
+		t.Fatalf("Execute() error = %v, want Review failure", err)
+	}
+	statusMatches, _ := filepath.Glob(filepath.Join(repo, reviewsDir, "*", "status.json"))
+	if len(statusMatches) != 1 {
+		t.Fatalf("status.json matches = %v", statusMatches)
+	}
+	data, err := os.ReadFile(statusMatches[0])
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	got := string(data)
+	if strings.Contains(got, "token=secret") || strings.Contains(got, "203.0.113.10") {
+		t.Fatalf("status.json leaked raw error:\n%s", got)
+	}
+	if !strings.Contains(got, "[redacted-secret]") || !strings.Contains(got, "[redacted-url]") {
+		t.Fatalf("status.json missing redaction:\n%s", got)
+	}
+}
+
+func TestCollectDiffIncludesUntrackedFiles(t *testing.T) {
+	repo := initGitRepo(t)
+	writeFile(t, filepath.Join(repo, "new file.txt"), "new\ncontent\n")
+	if err := os.MkdirAll(filepath.Join(repo, ".monkeyscan", "reviews", "run-1"), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	writeFile(t, filepath.Join(repo, ".monkeyscan", "reviews", "run-1", "review.md"), "local result\n")
+
+	wd, _ := os.Getwd()
+	t.Cleanup(func() { _ = os.Chdir(wd) })
+	if err := os.Chdir(repo); err != nil {
+		t.Fatalf("Chdir() error = %v", err)
+	}
+	snapshot, err := collectDiff(t.Context(), reviewScope{Type: "uncommitted"})
+	if err != nil {
+		t.Fatalf("collectDiff() error = %v", err)
+	}
+	if !strings.Contains(snapshot.Diff, "diff --git a/new file.txt b/new file.txt") {
+		t.Fatalf("diff missing untracked file:\n%s", snapshot.Diff)
+	}
+	if strings.Contains(snapshot.Diff, ".monkeyscan") {
+		t.Fatalf("diff includes local review files:\n%s", snapshot.Diff)
+	}
+	if len(snapshot.Files) != 1 {
+		t.Fatalf("files = %+v, want one untracked file", snapshot.Files)
+	}
+	file := snapshot.Files[0]
+	if file.Path != "new file.txt" || file.Status != "added" || file.Additions != 2 || file.Patch == "" {
+		t.Fatalf("untracked file metadata = %+v", file)
 	}
 }
 
