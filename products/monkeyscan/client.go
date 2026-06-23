@@ -137,7 +137,7 @@ func isTerminalReviewStatus(runStatus, groupStatus string) bool {
 }
 
 func isSuccessfulReviewStatus(runStatus, groupStatus string) bool {
-	if strings.EqualFold(runStatus, "completed") || strings.EqualFold(groupStatus, "success") {
+	if strings.EqualFold(runStatus, "completed") || strings.EqualFold(runStatus, "success") || strings.EqualFold(groupStatus, "success") {
 		return true
 	}
 	return false

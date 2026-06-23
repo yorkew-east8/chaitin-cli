@@ -352,7 +352,7 @@ func validateReviewScope(opts reviewScope) error {
 func buildReviewRequest(cmd *cobra.Command, snapshot *diffSnapshot, clientRunID string) diffReviewRequest {
 	return diffReviewRequest{
 		ClientRunID:  clientRunID,
-		Command:      strings.Join(os.Args, " "),
+		Command:      safeCommandPath(cmd),
 		Scope:        snapshot.Scope,
 		GitRemoteURL: snapshot.RemoteURL,
 		BaseBranch:   snapshot.BaseBranch,
@@ -362,6 +362,18 @@ func buildReviewRequest(cmd *cobra.Command, snapshot *diffSnapshot, clientRunID 
 		Diff:         snapshot.Diff,
 		Files:        snapshot.Files,
 	}
+}
+
+func safeCommandPath(cmd *cobra.Command) string {
+	if cmd != nil {
+		if path := strings.TrimSpace(cmd.CommandPath()); path != "" {
+			return path
+		}
+	}
+	if len(os.Args) == 0 {
+		return ""
+	}
+	return filepath.Base(os.Args[0])
 }
 
 func resolveKey() (string, keySource) {

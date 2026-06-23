@@ -16,15 +16,12 @@ func collectDiff(ctx context.Context, opts reviewScope) (*diffSnapshot, error) {
 		return nil, fmt.Errorf("当前目录不是 Git 仓库或无法读取仓库根目录: %w", err)
 	}
 	repoRoot = strings.TrimSpace(repoRoot)
-	remoteURL, err := gitOutput(ctx, repoRoot, "remote", "get-url", "origin")
-	if err != nil {
-		return nil, fmt.Errorf("无法读取 origin remote URL: %w", err)
-	}
+	remoteURL := resolveRemoteURL(ctx, repoRoot)
 	branch, _ := gitOutput(ctx, repoRoot, "branch", "--show-current")
 	headSHA, _ := gitOutput(ctx, repoRoot, "rev-parse", "HEAD")
 	s := &diffSnapshot{
 		RepoRoot:      repoRoot,
-		RemoteURL:     strings.TrimSpace(remoteURL),
+		RemoteURL:     remoteURL,
 		CurrentBranch: strings.TrimSpace(branch),
 		HeadSHA:       strings.TrimSpace(headSHA),
 		Scope:         scopeName(opts),
@@ -69,6 +66,26 @@ func collectDiff(ctx context.Context, opts reviewScope) (*diffSnapshot, error) {
 	s.Diff = diff
 	s.Files = files
 	return s, nil
+}
+
+func resolveRemoteURL(ctx context.Context, repoRoot string) string {
+	if remoteURL, err := gitOutput(ctx, repoRoot, "remote", "get-url", "origin"); err == nil {
+		return strings.TrimSpace(remoteURL)
+	}
+	remotes, err := gitOutput(ctx, repoRoot, "remote")
+	if err != nil {
+		return ""
+	}
+	for _, remote := range strings.Split(remotes, "\n") {
+		remote = strings.TrimSpace(remote)
+		if remote == "" {
+			continue
+		}
+		if remoteURL, err := gitOutput(ctx, repoRoot, "remote", "get-url", remote); err == nil {
+			return strings.TrimSpace(remoteURL)
+		}
+	}
+	return ""
 }
 
 func diffForMode(ctx context.Context, repoRoot, mode, base, head string) (string, []changedFile, error) {

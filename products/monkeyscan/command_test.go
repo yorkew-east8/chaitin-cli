@@ -118,6 +118,15 @@ func TestClientStatusFallsBackToReadyCompatibilityField(t *testing.T) {
 	}
 }
 
+func TestReviewStatusRecognizesSuccessRunStatus(t *testing.T) {
+	if !isTerminalReviewStatus("success", "") {
+		t.Fatal("success run status should be terminal")
+	}
+	if !isSuccessfulReviewStatus("success", "") {
+		t.Fatal("success run status should be successful")
+	}
+}
+
 func TestAuthSetKeyAndClearPersistConfig(t *testing.T) {
 	oldCfg, oldConfigPath, oldReadSecret := runtimeCfg, runtimeConfigPath, readSecret
 	t.Cleanup(func() {
@@ -228,6 +237,27 @@ func TestWriteReviewMarkdownPrefersSuggestedDiffAndSanitizesError(t *testing.T) 
 	for _, leaked := range []string{"legacy diff", "msk_test_SAMPLE", "203.0.113.10"} {
 		if strings.Contains(got, leaked) {
 			t.Fatalf("review.md leaked %q:\n%s", leaked, got)
+		}
+	}
+}
+
+func TestBuildReviewRequestUsesSafeCommandPath(t *testing.T) {
+	oldArgs := os.Args
+	t.Cleanup(func() { os.Args = oldArgs })
+	os.Args = []string{"chaitin-cli", "monkeyscan", "review", "--api-key", "secret-token-value", "--url", "http://203.0.113.10"}
+
+	cmd := NewCommand()
+	reviewCmd, _, err := cmd.Find([]string{"review"})
+	if err != nil {
+		t.Fatalf("Find() error = %v", err)
+	}
+	req := buildReviewRequest(reviewCmd, &diffSnapshot{Scope: "uncommitted"}, "run-1")
+	if req.Command != "monkeyscan review" {
+		t.Fatalf("Command = %q, want command path only", req.Command)
+	}
+	for _, leaked := range []string{"secret-token-value", "203.0.113.10", "--api-key"} {
+		if strings.Contains(req.Command, leaked) {
+			t.Fatalf("Command leaked %q: %q", leaked, req.Command)
 		}
 	}
 }
@@ -440,6 +470,28 @@ func TestCollectDiffIncludesUntrackedFiles(t *testing.T) {
 	file := snapshot.Files[0]
 	if file.Path != "new file.txt" || file.Status != "added" || file.Additions != 2 || file.Patch == "" {
 		t.Fatalf("untracked file metadata = %+v", file)
+	}
+}
+
+func TestCollectDiffWithoutOriginRemoteContinues(t *testing.T) {
+	repo := initGitRepo(t)
+	runGit(t, repo, "remote", "remove", "origin")
+	writeFile(t, filepath.Join(repo, "README.md"), "hello\nchanged\n")
+
+	wd, _ := os.Getwd()
+	t.Cleanup(func() { _ = os.Chdir(wd) })
+	if err := os.Chdir(repo); err != nil {
+		t.Fatalf("Chdir() error = %v", err)
+	}
+	snapshot, err := collectDiff(t.Context(), reviewScope{Type: "uncommitted"})
+	if err != nil {
+		t.Fatalf("collectDiff() error = %v", err)
+	}
+	if snapshot.RemoteURL != "" {
+		t.Fatalf("RemoteURL = %q, want empty without remotes", snapshot.RemoteURL)
+	}
+	if strings.TrimSpace(snapshot.Diff) == "" {
+		t.Fatal("diff is empty")
 	}
 }
 
