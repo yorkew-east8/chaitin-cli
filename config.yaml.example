@@ -57,4 +57,4 @@ cosmos:
 
 monkeyscan:
   url: ""
-  key: ""
+  api_key: ""

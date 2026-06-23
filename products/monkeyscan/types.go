@@ -5,15 +5,15 @@ import "time"
 const (
 	productName       = "monkeyscan"
 	defaultURL        = "https://monkeyscan-ai.com"
-	envKeyName        = "MONKEYSCAN_KEY"
+	envAPIKeyName     = "MONKEYSCAN_API_KEY"
 	envURLName        = "MONKEYSCAN_URL"
 	reviewsDir        = ".monkeyscan/reviews"
 	maxReviewBodySize = 5 * 1024 * 1024
 )
 
 type Config struct {
-	URL string `yaml:"url"`
-	Key string `yaml:"key"`
+	URL    string `yaml:"url"`
+	APIKey string `yaml:"api_key"`
 }
 
 type keySource string

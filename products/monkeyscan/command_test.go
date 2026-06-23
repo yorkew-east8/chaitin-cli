@@ -18,8 +18,8 @@ import (
 func TestResolveKeyPrefersEnvironment(t *testing.T) {
 	oldCfg := runtimeCfg
 	t.Cleanup(func() { runtimeCfg = oldCfg })
-	runtimeCfg = Config{Key: "config-key"}
-	t.Setenv(envKeyName, "env-key")
+	runtimeCfg = Config{APIKey: "config-key"}
+	t.Setenv(envAPIKeyName, "env-key")
 
 	key, source := resolveKey()
 	if key != "env-key" || source != keySourceEnv {
@@ -32,7 +32,7 @@ func TestApplyRuntimeConfigUsesURLDefaultAndEnvOverride(t *testing.T) {
 	t.Cleanup(func() { runtimeCfg = oldCfg })
 	t.Setenv(envURLName, "https://env.example.com/")
 
-	raw := rawMonkeyscanConfig(t, Config{URL: "https://config.example.com", Key: "config-key"})
+	raw := rawMonkeyscanConfig(t, Config{URL: "https://config.example.com", APIKey: "config-key"})
 	ApplyRuntimeConfig(nil, raw, "config.yaml", false)
 	applyRuntimeConfig()
 
@@ -155,7 +155,7 @@ func TestAuthSetKeyAndClearPersistConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DecodeProduct() error = %v", err)
 	}
-	if saved.Key != "saved-key" || saved.URL != "https://example.com" {
+	if saved.APIKey != "saved-key" || saved.URL != "https://example.com" {
 		t.Fatalf("saved config = %+v", saved)
 	}
 
@@ -175,7 +175,7 @@ func TestAuthSetKeyAndClearPersistConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DecodeProduct() after clear error = %v", err)
 	}
-	if cleared.Key != "" || cleared.URL != "https://example.com" {
+	if cleared.APIKey != "" || cleared.URL != "https://example.com" {
 		t.Fatalf("cleared config = %+v", cleared)
 	}
 }
@@ -336,7 +336,7 @@ func TestRunReviewCreatesResultFiles(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	runtimeCfg = Config{URL: server.URL, Key: "key"}
+	runtimeCfg = Config{URL: server.URL, APIKey: "key"}
 
 	repo := initGitRepo(t)
 	writeFile(t, filepath.Join(repo, "README.md"), "hello\nchanged\n")
@@ -404,7 +404,7 @@ func TestRunReviewFailedResultReturnsErrorAndSanitizesStatus(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	runtimeCfg = Config{URL: server.URL, Key: "key"}
+	runtimeCfg = Config{URL: server.URL, APIKey: "key"}
 
 	repo := initGitRepo(t)
 	writeFile(t, filepath.Join(repo, "README.md"), "hello\nchanged\n")

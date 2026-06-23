@@ -81,7 +81,7 @@ func newAuthSetKeyCommand() *cobra.Command {
 			}
 			newCfg := runtimeCfg
 			newCfg.URL = normalizedURL(newCfg.URL)
-			newCfg.Key = key
+			newCfg.APIKey = key
 			if err := config.SetProduct(runtimeConfigPath, productName, newCfg); err != nil {
 				return err
 			}
@@ -103,7 +103,7 @@ func newAuthStatusCommand() *cobra.Command {
 			if key == "" {
 				fmt.Fprintln(cmd.OutOrStdout(), "Key 状态: 未配置")
 				fmt.Fprintf(cmd.OutOrStdout(), "Key 来源: %s\n", keySourceNone)
-				fmt.Fprintln(cmd.OutOrStdout(), "请先运行 monkeyscan auth set-key 或设置 MONKEYSCAN_KEY")
+				fmt.Fprintf(cmd.OutOrStdout(), "请先运行 monkeyscan auth set-key 或设置 %s\n", envAPIKeyName)
 				return nil
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), "Key 状态: 已配置")
@@ -145,14 +145,14 @@ func newAuthClearCommand() *cobra.Command {
 			}
 			newCfg := runtimeCfg
 			newCfg.URL = normalizedURL(newCfg.URL)
-			newCfg.Key = ""
+			newCfg.APIKey = ""
 			if err := config.SetProduct(runtimeConfigPath, productName, newCfg); err != nil {
 				return err
 			}
 			runtimeCfg = newCfg
 			fmt.Fprintf(cmd.OutOrStdout(), "已清除本机保存的 MonkeyScan CLI API Key: %s\n", runtimeConfigPath)
-			if os.Getenv(envKeyName) != "" {
-				fmt.Fprintln(cmd.OutOrStdout(), "环境变量 MONKEYSCAN_KEY 仍会继续生效")
+			if os.Getenv(envAPIKeyName) != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "环境变量 %s 仍会继续生效\n", envAPIKeyName)
 			}
 			return nil
 		},
@@ -207,7 +207,7 @@ func runReview(cmd *cobra.Command, opts reviewScope) error {
 	}
 	key, _ := resolveKey()
 	if key == "" {
-		return fmt.Errorf("未配置 MonkeyScan CLI API Key，请先运行 monkeyscan auth set-key 或设置 MONKEYSCAN_KEY")
+		return fmt.Errorf("未配置 MonkeyScan CLI API Key，请先运行 monkeyscan auth set-key 或设置 %s", envAPIKeyName)
 	}
 	req := buildReviewRequest(cmd, snapshot, "")
 	if size, err := encodedSize(req); err == nil && size > maxReviewBodySize {
@@ -264,7 +264,7 @@ func runReview(cmd *cobra.Command, opts reviewScope) error {
 func runReviewStatus(cmd *cobra.Command, run string) error {
 	key, _ := resolveKey()
 	if key == "" {
-		return fmt.Errorf("未配置 MonkeyScan CLI API Key，请先运行 monkeyscan auth set-key 或设置 MONKEYSCAN_KEY")
+		return fmt.Errorf("未配置 MonkeyScan CLI API Key，请先运行 monkeyscan auth set-key 或设置 %s", envAPIKeyName)
 	}
 	repoRoot, _ := gitOutput(cmd.Context(), "", "rev-parse", "--show-toplevel")
 	repoRoot = strings.TrimSpace(repoRoot)
@@ -377,10 +377,10 @@ func safeCommandPath(cmd *cobra.Command) string {
 }
 
 func resolveKey() (string, keySource) {
-	if key := strings.TrimSpace(os.Getenv(envKeyName)); key != "" {
+	if key := strings.TrimSpace(os.Getenv(envAPIKeyName)); key != "" {
 		return key, keySourceEnv
 	}
-	if key := strings.TrimSpace(runtimeCfg.Key); key != "" {
+	if key := strings.TrimSpace(runtimeCfg.APIKey); key != "" {
 		return key, keySourceConfig
 	}
 	return "", keySourceNone
