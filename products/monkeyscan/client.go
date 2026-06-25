@@ -6,8 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -55,22 +59,119 @@ func (c *client) ReviewDetail(ctx context.Context, runID string) (*reviewDetail,
 	return &out, nil
 }
 
+func (c *client) CreateRepoScan(ctx context.Context, req scanCreateRequest) (*scanCreateResponse, error) {
+	var out scanCreateResponse
+	if err := c.doJSON(ctx, http.MethodPost, "/api/v1/cli/scans?type=repo", req, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *client) CreateArchiveScan(ctx context.Context, filePath, taskName string) (*scanCreateResponse, error) {
+	return c.CreateArchiveScanWithName(ctx, filePath, taskName, filepath.Base(filePath))
+}
+
+func (c *client) CreateArchiveScanWithName(ctx context.Context, filePath, taskName, fileName string) (*scanCreateResponse, error) {
+	reader, writer := io.Pipe()
+	form := multipart.NewWriter(writer)
+	go writeArchiveScanMultipart(writer, form, filePath, taskName, fileName)
+	var out scanCreateResponse
+	if err := c.do(ctx, http.MethodPost, "/api/v1/cli/scans?type=archive", reader, form.FormDataContentType(), &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func writeArchiveScanMultipart(pipe *io.PipeWriter, form *multipart.Writer, filePath, taskName, fileName string) {
+	var err error
+	defer func() {
+		if err != nil {
+			_ = pipe.CloseWithError(err)
+			return
+		}
+		_ = pipe.Close()
+	}()
+	if strings.TrimSpace(taskName) != "" {
+		if err = form.WriteField("task_name", taskName); err != nil {
+			err = fmt.Errorf("写入任务名称失败: %w", err)
+			return
+		}
+	}
+	if strings.TrimSpace(fileName) != "" {
+		if err = form.WriteField("file_name", fileName); err != nil {
+			err = fmt.Errorf("写入文件名称失败: %w", err)
+			return
+		}
+	}
+	file, openErr := os.Open(filePath)
+	if openErr != nil {
+		err = fmt.Errorf("打开上传文件失败: %w", openErr)
+		return
+	}
+	defer file.Close()
+	part, createErr := form.CreateFormFile("file", filepath.Base(filePath))
+	if createErr != nil {
+		err = fmt.Errorf("创建上传表单失败: %w", createErr)
+		return
+	}
+	if _, err = io.Copy(part, file); err != nil {
+		err = fmt.Errorf("写入上传文件失败: %w", err)
+		return
+	}
+	if err = form.Close(); err != nil {
+		err = fmt.Errorf("关闭上传表单失败: %w", err)
+	}
+}
+
+func (c *client) ListScans(ctx context.Context) (*scanListResponse, error) {
+	var out scanListResponse
+	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/cli/scans", nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *client) ScanResult(ctx context.Context, taskGroupID string, full bool) (*scanResultResponse, error) {
+	q := url.Values{}
+	if strings.TrimSpace(taskGroupID) != "" {
+		q.Set("task_group_id", strings.TrimSpace(taskGroupID))
+	}
+	if full {
+		q.Set("full", strconv.FormatBool(full))
+	}
+	path := "/api/v1/cli/scans/result"
+	if encoded := q.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	var out scanResultResponse
+	if err := c.doJSON(ctx, http.MethodGet, path, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *client) doJSON(ctx context.Context, method, path string, body any, out any) error {
 	var reqBody io.Reader
+	contentType := ""
 	if body != nil {
 		data, err := json.Marshal(body)
 		if err != nil {
 			return fmt.Errorf("编码请求失败: %w", err)
 		}
 		reqBody = bytes.NewReader(data)
+		contentType = "application/json"
 	}
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reqBody)
+	return c.do(ctx, method, path, reqBody, contentType, out)
+}
+
+func (c *client) do(ctx context.Context, method, path string, body io.Reader, contentType string, out any) error {
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, body)
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.key)
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -152,4 +253,36 @@ func isFailedReviewStatus(runStatus, groupStatus string) bool {
 		return true
 	}
 	return false
+}
+
+func waitScanResult(ctx context.Context, client *client, taskGroupID string, full bool) (*scanResultResponse, error) {
+	deadline := time.NewTimer(pollTimeout)
+	defer deadline.Stop()
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+	for {
+		result, err := client.ScanResult(ctx, taskGroupID, full)
+		if err != nil {
+			return nil, err
+		}
+		if isTerminalScanStatus(result.Task.Status) {
+			return result, nil
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-deadline.C:
+			return nil, fmt.Errorf("等待扫描结果超时")
+		case <-ticker.C:
+		}
+	}
+}
+
+func isTerminalScanStatus(status string) bool {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "success", "failed", "partial_success":
+		return true
+	default:
+		return false
+	}
 }

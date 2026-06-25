@@ -37,6 +37,7 @@ func NewCommand() *cobra.Command {
 	}
 	cmd.AddCommand(newAuthCommand())
 	cmd.AddCommand(newReviewCommand())
+	cmd.AddCommand(newScanCommand())
 	return cmd
 }
 
@@ -187,6 +188,166 @@ func newReviewStatusCommand() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&run, "run", "", "Client run id, server run id, or local run directory")
 	return cmd
+}
+
+func newScanCommand() *cobra.Command {
+	opts := scanOptions{}
+	cmd := &cobra.Command{
+		Use:   "scan",
+		Short: "Run MonkeyScan full scan",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runScan(cmd, opts)
+		},
+	}
+	cmd.Flags().StringVar(&opts.Path, "path", "", "Source directory to package and scan")
+	cmd.Flags().StringVar(&opts.File, "file", "", "Archive file to upload and scan")
+	cmd.Flags().StringVar(&opts.Repo, "repo", "", "GitHub repository URL to scan")
+	cmd.Flags().StringVar(&opts.Branch, "branch", "", "Repository branch for --repo")
+	cmd.Flags().BoolVar(&opts.Wait, "wait", false, "Wait for scan completion and print result")
+	cmd.Flags().BoolVar(&opts.Full, "full", false, "Print full scan report")
+	cmd.Flags().StringVar(&opts.Output, "output", "", "Write scan result to file")
+	cmd.AddCommand(newScanListCommand())
+	cmd.AddCommand(newScanResultCommand())
+	return cmd
+}
+
+func newScanListCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List recent MonkeyScan full scan tasks",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runScanList(cmd)
+		},
+	}
+}
+
+func newScanResultCommand() *cobra.Command {
+	opts := scanOptions{}
+	cmd := &cobra.Command{
+		Use:   "result [task_group_id]",
+		Short: "Fetch MonkeyScan full scan result",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				opts.TaskGroupID = args[0]
+			}
+			return runScanResult(cmd, opts.TaskGroupID, opts.Full, opts.Output)
+		},
+	}
+	cmd.Flags().BoolVar(&opts.Full, "full", false, "Print full scan report")
+	cmd.Flags().StringVar(&opts.Output, "output", "", "Write scan result to file")
+	return cmd
+}
+
+func runScan(cmd *cobra.Command, opts scanOptions) error {
+	if err := validateScanOptions(opts); err != nil {
+		return err
+	}
+	if dryRun {
+		fmt.Fprintf(cmd.OutOrStdout(), "MonkeyScan Scan Dry Run\n服务地址: %s\n", normalizedURL(runtimeCfg.URL))
+		return nil
+	}
+	client, err := authenticatedClient()
+	if err != nil {
+		return err
+	}
+	var resp *scanCreateResponse
+	if strings.TrimSpace(opts.Repo) != "" {
+		resp, err = client.CreateRepoScan(cmd.Context(), scanCreateRequest{
+			RepoURL:  opts.Repo,
+			Branch:   opts.Branch,
+			TaskName: "",
+		})
+	} else {
+		archivePath, cleanup, err := prepareScanArchive(opts)
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+		resp, err = client.CreateArchiveScanWithName(cmd.Context(), archivePath, scanArchiveTaskName(opts), scanArchiveFileName(opts))
+	}
+	if err != nil {
+		return err
+	}
+	printScanCreated(cmd, resp)
+	if !opts.Wait {
+		return nil
+	}
+	result, err := waitScanResult(cmd.Context(), client, resp.TaskGroupID, opts.Full)
+	if err != nil {
+		return err
+	}
+	return outputScanResult(cmd, result, opts.Output)
+}
+
+func runScanList(cmd *cobra.Command) error {
+	client, err := authenticatedClient()
+	if err != nil {
+		return err
+	}
+	resp, err := client.ListScans(cmd.Context())
+	if err != nil {
+		return err
+	}
+	printScanList(cmd, resp)
+	return nil
+}
+
+func runScanResult(cmd *cobra.Command, taskGroupID string, full bool, output string) error {
+	client, err := authenticatedClient()
+	if err != nil {
+		return err
+	}
+	resp, err := client.ScanResult(cmd.Context(), taskGroupID, full)
+	if err != nil {
+		return err
+	}
+	return outputScanResult(cmd, resp, output)
+}
+
+func validateScanOptions(opts scanOptions) error {
+	count := 0
+	for _, value := range []string{opts.Path, opts.File, opts.Repo} {
+		if strings.TrimSpace(value) != "" {
+			count++
+		}
+	}
+	if count > 1 {
+		return fmt.Errorf("--path、--file、--repo 只能指定一个")
+	}
+	if strings.TrimSpace(opts.Branch) != "" && strings.TrimSpace(opts.Repo) == "" {
+		return fmt.Errorf("--branch 仅支持和 --repo 一起使用")
+	}
+	return nil
+}
+
+func authenticatedClient() (*client, error) {
+	key, _ := resolveKey()
+	if key == "" {
+		return nil, fmt.Errorf("未配置 MonkeyScan CLI API Key，请先运行 monkeyscan auth set-key 或设置 %s", envAPIKeyName)
+	}
+	return newClient(normalizedURL(runtimeCfg.URL), key), nil
+}
+
+func scanArchiveTaskName(opts scanOptions) string {
+	if strings.TrimSpace(opts.File) != "" {
+		return strings.TrimSuffix(filepath.Base(opts.File), filepath.Ext(opts.File))
+	}
+	source := strings.TrimSpace(opts.Path)
+	if source == "" || source == "." {
+		if wd, err := os.Getwd(); err == nil {
+			return filepath.Base(wd)
+		}
+		return "local-source"
+	}
+	return filepath.Base(source)
+}
+
+func scanArchiveFileName(opts scanOptions) string {
+	if strings.TrimSpace(opts.File) != "" {
+		return filepath.Base(opts.File)
+	}
+	return scanArchiveTaskName(opts)
 }
 
 func runReview(cmd *cobra.Command, opts reviewScope) error {

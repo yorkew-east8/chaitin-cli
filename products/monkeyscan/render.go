@@ -37,6 +37,123 @@ func printReviewSummary(cmd *cobra.Command, detail *reviewDetail, reviewPath str
 	fmt.Fprintln(cmd.OutOrStdout(), "提示: .monkeyscan 可能包含代码 diff 和修复建议，请不要提交到仓库。")
 }
 
+func printScanCreated(cmd *cobra.Command, resp *scanCreateResponse) {
+	fmt.Fprintln(cmd.OutOrStdout(), "MonkeyScan 扫描任务已创建")
+	fmt.Fprintf(cmd.OutOrStdout(), "Task Group ID: %s\n", resp.TaskGroupID)
+	fmt.Fprintf(cmd.OutOrStdout(), "状态: %s\n", resp.Status)
+	fmt.Fprintf(cmd.OutOrStdout(), "扫描对象: %s\n", scanTargetLabel(resp.ScanTarget))
+	for _, next := range resp.NextCommands {
+		fmt.Fprintf(cmd.OutOrStdout(), "后续查询: %s\n", next)
+	}
+}
+
+func printScanList(cmd *cobra.Command, resp *scanListResponse) {
+	fmt.Fprintln(cmd.OutOrStdout(), "最近 7 天全量扫描任务")
+	if len(resp.Items) == 0 {
+		fmt.Fprintln(cmd.OutOrStdout(), "暂无扫描任务。")
+		return
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "%-36s  %-14s  %-24s  %-8s  %-20s\n", "TASK_GROUP_ID", "STATUS", "TARGET", "DEFECTS", "CREATED_AT")
+	for _, item := range resp.Items {
+		fmt.Fprintf(
+			cmd.OutOrStdout(),
+			"%-36s  %-14s  %-24s  %-8d  %-20s\n",
+			item.TaskGroupID,
+			item.Status,
+			truncate(scanTargetLabel(item.ScanTarget), 24),
+			item.DefectCount,
+			formatTime(item.CreatedAt),
+		)
+	}
+}
+
+func outputScanResult(cmd *cobra.Command, result *scanResultResponse, output string) error {
+	content := renderScanResultMarkdown(result)
+	if strings.TrimSpace(output) != "" {
+		if err := os.WriteFile(output, []byte(content), 0o600); err != nil {
+			return err
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "扫描结果已写入: %s\n", output)
+		return nil
+	}
+	fmt.Fprint(cmd.OutOrStdout(), content)
+	return nil
+}
+
+func renderScanResultMarkdown(result *scanResultResponse) string {
+	var b strings.Builder
+	b.WriteString("# MonkeyScan 扫描结果\n\n")
+	b.WriteString("## 基础信息\n\n")
+	fmt.Fprintf(&b, "- Task Group ID: %s\n", result.Task.TaskGroupID)
+	fmt.Fprintf(&b, "- 状态: %s\n", result.Task.Status)
+	fmt.Fprintf(&b, "- 扫描对象: %s\n", scanTargetLabel(result.Task.ScanTarget))
+	fmt.Fprintf(&b, "- 创建时间: %s\n", formatTime(result.Task.CreatedAt))
+	fmt.Fprintf(&b, "- 更新时间: %s\n\n", formatTime(result.Task.UpdatedAt))
+	b.WriteString("## 统计摘要\n\n")
+	fmt.Fprintf(&b, "- 漏洞总数: %d\n", result.Total)
+	fmt.Fprintf(&b, "- Critical: %d\n", result.Severity.Critical)
+	fmt.Fprintf(&b, "- High: %d\n", result.Severity.High)
+	fmt.Fprintf(&b, "- Medium: %d\n", result.Severity.Medium)
+	fmt.Fprintf(&b, "- Low: %d\n\n", result.Severity.Low)
+	b.WriteString("## 漏洞列表\n\n")
+	if len(result.Items) == 0 {
+		b.WriteString("未发现漏洞。\n")
+		return b.String()
+	}
+	for i, item := range result.Items {
+		title := firstNonEmpty(item.DefectNameZh, item.DefectName, item.RuleName, item.ID)
+		fmt.Fprintf(&b, "### %d. %s\n\n", i+1, title)
+		fmt.Fprintf(&b, "- 严重性: %s\n", item.Severity)
+		if item.FilePath != "" {
+			fmt.Fprintf(&b, "- 位置: %s:%d\n", item.FilePath, item.Line)
+		}
+		if item.RuleName != "" {
+			fmt.Fprintf(&b, "- 规则: %s\n", item.RuleName)
+		}
+		fmt.Fprintf(&b, "- 验证状态: %d\n", item.AiVerifyStatus)
+		if !result.Full {
+			b.WriteString("\n")
+			continue
+		}
+		if text := firstNonEmpty(item.MessageZh, item.Message, item.CheckerMessage); text != "" {
+			fmt.Fprintf(&b, "\n**描述**\n\n%s\n", text)
+		}
+		if item.CodeSnippet != "" {
+			fmt.Fprintf(&b, "\n**代码片段**\n\n```text\n%s\n```\n", item.CodeSnippet)
+		}
+		if text := firstNonEmpty(item.Recommendation, item.AiSuggestion); text != "" {
+			fmt.Fprintf(&b, "\n**修复建议**\n\n%s\n", text)
+		}
+		if item.AiVerification != "" {
+			fmt.Fprintf(&b, "\n**验证/降噪结论**\n\n%s\n", item.AiVerification)
+		}
+		b.WriteString("\n")
+	}
+	return b.String()
+}
+
+func scanTargetLabel(target scanTarget) string {
+	switch target.Type {
+	case "git":
+		if target.Ref != "" {
+			return fmt.Sprintf("%s@%s", firstNonEmpty(target.URL, target.Name), target.Ref)
+		}
+		return firstNonEmpty(target.URL, target.Name)
+	default:
+		return firstNonEmpty(target.Name, target.URL, target.Type)
+	}
+}
+
+func truncate(value string, width int) string {
+	if len(value) <= width {
+		return value
+	}
+	if width <= 3 {
+		return value[:width]
+	}
+	return value[:width-3] + "..."
+}
+
 func writeReviewMarkdown(path string, detail *reviewDetail) error {
 	var b strings.Builder
 	b.WriteString("# MonkeyScan Review 结果\n\n")
