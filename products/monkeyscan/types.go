@@ -124,9 +124,10 @@ type scanResultResponse struct {
 		Medium   int `json:"medium"`
 		Low      int `json:"low"`
 	} `json:"severity"`
-	Total int          `json:"total"`
-	Items []scanDefect `json:"items"`
-	Full  bool         `json:"full"`
+	Total     int          `json:"total"`
+	Items     []scanDefect `json:"items"`
+	Full      bool         `json:"full"`
+	Truncated bool         `json:"truncated"`
 }
 
 type scanDefect struct {

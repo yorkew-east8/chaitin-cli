@@ -95,6 +95,9 @@ func renderScanResultMarkdown(result *scanResultResponse) string {
 	fmt.Fprintf(&b, "- High: %d\n", result.Severity.High)
 	fmt.Fprintf(&b, "- Medium: %d\n", result.Severity.Medium)
 	fmt.Fprintf(&b, "- Low: %d\n\n", result.Severity.Low)
+	if result.Truncated {
+		fmt.Fprintf(&b, "> 结果数量较多，本次仅展示前 %d 条。请在 MonkeyScan 页面查看完整结果。\n\n", len(result.Items))
+	}
 	b.WriteString("## 漏洞列表\n\n")
 	if len(result.Items) == 0 {
 		b.WriteString("未发现漏洞。\n")

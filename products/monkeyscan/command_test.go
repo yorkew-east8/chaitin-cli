@@ -271,6 +271,19 @@ func TestValidateArchiveFileBodySizeRejectsOver100MB(t *testing.T) {
 	}
 }
 
+func TestRenderScanResultMarkdownShowsTruncatedNotice(t *testing.T) {
+	got := renderScanResultMarkdown(&scanResultResponse{
+		Task:      scanListItem{TaskGroupID: "group-1", Status: "success"},
+		Total:     5001,
+		Items:     []scanDefect{{ID: "defect-1", Severity: "critical"}},
+		Full:      true,
+		Truncated: true,
+	})
+	if !strings.Contains(got, "仅展示前 1 条") {
+		t.Fatalf("renderScanResultMarkdown() missing truncated notice:\n%s", got)
+	}
+}
+
 func TestScanCommandsRejectUnexpectedArgs(t *testing.T) {
 	tests := [][]string{
 		{"scan", "./repo"},
