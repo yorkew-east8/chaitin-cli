@@ -251,6 +251,46 @@ func TestClientArchiveScanEndpointSendsTypeAndDisplayNames(t *testing.T) {
 	}
 }
 
+func TestValidateArchiveFileBodySizeRejectsOver100MB(t *testing.T) {
+	archive := filepath.Join(t.TempDir(), "oversized.zip")
+	file, err := os.Create(archive)
+	if err != nil {
+		t.Fatalf("create archive: %v", err)
+	}
+	if err := file.Truncate(maxArchiveFileBody + 1); err != nil {
+		_ = file.Close()
+		t.Fatalf("truncate archive: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatalf("close archive: %v", err)
+	}
+
+	err = validateArchiveFileBodySize(archive)
+	if err == nil || !strings.Contains(err.Error(), "超过 100M 限制") {
+		t.Fatalf("validateArchiveFileBodySize() error = %v, want 100M limit", err)
+	}
+}
+
+func TestScanCommandsRejectUnexpectedArgs(t *testing.T) {
+	tests := [][]string{
+		{"scan", "./repo"},
+		{"scan", "list", "extra"},
+	}
+	for _, args := range tests {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			cmd := NewCommand()
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			cmd.SetErr(&out)
+			cmd.SetArgs(args)
+			err := cmd.Execute()
+			if err == nil || !strings.Contains(err.Error(), "unknown command") && !strings.Contains(err.Error(), "accepts 0 arg") {
+				t.Fatalf("Execute(%v) error = %v, output = %s", args, err, out.String())
+			}
+		})
+	}
+}
+
 func TestReviewStatusRecognizesSuccessRunStatus(t *testing.T) {
 	if !isTerminalReviewStatus("success", "") {
 		t.Fatal("success run status should be terminal")

@@ -27,7 +27,7 @@ func newClient(baseURL, key string) *client {
 		baseURL: strings.TrimRight(baseURL, "/"),
 		key:     strings.TrimSpace(key),
 		httpClient: &http.Client{
-			Timeout: 60 * time.Second,
+			Timeout: 180 * time.Second,
 		},
 	}
 }

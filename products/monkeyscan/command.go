@@ -195,6 +195,7 @@ func newScanCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "scan",
 		Short: "Run MonkeyScan full scan",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runScan(cmd, opts)
 		},
@@ -215,6 +216,7 @@ func newScanListCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List recent MonkeyScan full scan tasks",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runScanList(cmd)
 		},

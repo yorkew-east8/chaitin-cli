@@ -17,6 +17,9 @@ func prepareScanArchive(opts scanOptions) (string, func(), error) {
 		if err := validateArchive(opts.File); err != nil {
 			return "", func() {}, err
 		}
+		if err := validateArchiveFileBodySize(opts.File); err != nil {
+			return "", func() {}, err
+		}
 		return opts.File, func() {}, nil
 	}
 	source := strings.TrimSpace(opts.Path)
@@ -44,6 +47,10 @@ func prepareScanArchive(opts scanOptions) (string, func(), error) {
 		return "", func() {}, err
 	}
 	if err := validateArchive(tmpPath); err != nil {
+		cleanup()
+		return "", func() {}, err
+	}
+	if err := validateArchiveFileBodySize(tmpPath); err != nil {
 		cleanup()
 		return "", func() {}, err
 	}
@@ -122,6 +129,17 @@ func validateArchive(filePath string) error {
 		return validateZipArchive(&reader.Reader)
 	}
 	return validateTarGzArchive(filePath)
+}
+
+func validateArchiveFileBodySize(filePath string) error {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return err
+	}
+	if info.Size() > maxArchiveFileBody {
+		return fmt.Errorf("压缩包当前大小是 %.1f M，超过 100M 限制", float64(info.Size())/(1024*1024))
+	}
+	return nil
 }
 
 func archiveTypeFromPath(filePath string) (string, error) {

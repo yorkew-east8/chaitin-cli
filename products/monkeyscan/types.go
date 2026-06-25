@@ -9,6 +9,7 @@ const (
 	envURLName         = "MONKEYSCAN_URL"
 	reviewsDir         = ".monkeyscan/reviews"
 	maxReviewBodySize  = 5 * 1024 * 1024
+	maxArchiveFileBody = 100 * 1024 * 1024
 	maxArchiveEntries  = 50000
 	maxArchiveDepth    = 100
 	maxArchiveSize     = 1024 * 1024 * 1024
