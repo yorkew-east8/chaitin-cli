@@ -71,6 +71,34 @@ func TestValidateReviewScope(t *testing.T) {
 	}
 }
 
+func TestValidateScanOptions(t *testing.T) {
+	tests := []struct {
+		name    string
+		opts    scanOptions
+		wantErr string
+	}{
+		{name: "default path"},
+		{name: "path", opts: scanOptions{Path: "."}},
+		{name: "file", opts: scanOptions{File: "repo.zip"}},
+		{name: "repo branch", opts: scanOptions{Repo: "https://github.com/acme/repo", Branch: "main"}},
+		{name: "multiple sources", opts: scanOptions{Path: ".", File: "repo.zip"}, wantErr: "只能指定一个"},
+		{name: "branch without repo", opts: scanOptions{Branch: "main"}, wantErr: "--branch"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateScanOptions(tt.opts)
+			if tt.wantErr == "" && err != nil {
+				t.Fatalf("validateScanOptions() error = %v", err)
+			}
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("validateScanOptions() error = %v, want contains %q", err, tt.wantErr)
+				}
+			}
+		})
+	}
+}
+
 func TestClientHandlesStatusAndAPIError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Authorization"); got != "Bearer secret" {
@@ -115,6 +143,164 @@ func TestClientStatusFallsBackToReadyCompatibilityField(t *testing.T) {
 	}
 	if !status.Ready || !status.ReviewReady {
 		t.Fatalf("Status() = %+v, want ready and review_ready true", status)
+	}
+}
+
+func TestClientScanEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer secret" {
+			t.Fatalf("Authorization = %q", got)
+		}
+		switch r.URL.Path {
+		case "/api/v1/cli/scans":
+			switch r.Method {
+			case http.MethodPost:
+				if r.URL.Query().Get("type") != "repo" {
+					t.Fatalf("type query = %q", r.URL.Query().Get("type"))
+				}
+				if r.Header.Get("Content-Type") != "application/json" {
+					t.Fatalf("Content-Type = %q", r.Header.Get("Content-Type"))
+				}
+				_ = json.NewEncoder(w).Encode(scanCreateResponse{TaskGroupID: "group-1", Status: "running"})
+			case http.MethodGet:
+				_ = json.NewEncoder(w).Encode(scanListResponse{Items: []scanListItem{{TaskGroupID: "group-1"}}})
+			default:
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+		case "/api/v1/cli/scans/result":
+			if r.URL.Query().Get("task_group_id") != "group-1" || r.URL.Query().Get("full") != "true" {
+				t.Fatalf("query = %s", r.URL.RawQuery)
+			}
+			_ = json.NewEncoder(w).Encode(scanResultResponse{Task: scanListItem{TaskGroupID: "group-1", Status: "success"}})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	client := newClient(server.URL, "secret")
+	created, err := client.CreateRepoScan(t.Context(), scanCreateRequest{RepoURL: "https://github.com/acme/repo"})
+	if err != nil {
+		t.Fatalf("CreateRepoScan() error = %v", err)
+	}
+	if created.TaskGroupID != "group-1" {
+		t.Fatalf("CreateRepoScan() = %+v", created)
+	}
+	list, err := client.ListScans(t.Context())
+	if err != nil {
+		t.Fatalf("ListScans() error = %v", err)
+	}
+	if len(list.Items) != 1 || list.Items[0].TaskGroupID != "group-1" {
+		t.Fatalf("ListScans() = %+v", list)
+	}
+	result, err := client.ScanResult(t.Context(), "group-1", true)
+	if err != nil {
+		t.Fatalf("ScanResult() error = %v", err)
+	}
+	if result.Task.Status != "success" {
+		t.Fatalf("ScanResult() = %+v", result)
+	}
+}
+
+func TestClientArchiveScanEndpointSendsTypeAndDisplayNames(t *testing.T) {
+	archive := filepath.Join(t.TempDir(), "monkeyscan-temp.zip")
+	if err := os.WriteFile(archive, []byte("archive-content"), 0o600); err != nil {
+		t.Fatalf("write archive: %v", err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/cli/scans" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("type") != "archive" {
+			t.Fatalf("type query = %q", r.URL.Query().Get("type"))
+		}
+		if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+			t.Fatalf("Content-Type = %q", r.Header.Get("Content-Type"))
+		}
+		if err := r.ParseMultipartForm(1024); err != nil {
+			t.Fatalf("ParseMultipartForm() error = %v", err)
+		}
+		if got := r.FormValue("task_name"); got != "source-dir" {
+			t.Fatalf("task_name = %q", got)
+		}
+		if got := r.FormValue("file_name"); got != "source-dir" {
+			t.Fatalf("file_name = %q", got)
+		}
+		file, _, err := r.FormFile("file")
+		if err != nil {
+			t.Fatalf("FormFile() error = %v", err)
+		}
+		defer file.Close()
+		var uploaded bytes.Buffer
+		if _, err := uploaded.ReadFrom(file); err != nil {
+			t.Fatalf("read uploaded file: %v", err)
+		}
+		if uploaded.String() != "archive-content" {
+			t.Fatalf("uploaded file = %q", uploaded.String())
+		}
+		_ = json.NewEncoder(w).Encode(scanCreateResponse{TaskGroupID: "group-2", Status: "running"})
+	}))
+	defer server.Close()
+
+	created, err := newClient(server.URL, "secret").CreateArchiveScanWithName(t.Context(), archive, "source-dir", "source-dir")
+	if err != nil {
+		t.Fatalf("CreateArchiveScanWithName() error = %v", err)
+	}
+	if created.TaskGroupID != "group-2" {
+		t.Fatalf("CreateArchiveScanWithName() = %+v", created)
+	}
+}
+
+func TestValidateArchiveFileBodySizeRejectsOver100MB(t *testing.T) {
+	archive := filepath.Join(t.TempDir(), "oversized.zip")
+	file, err := os.Create(archive)
+	if err != nil {
+		t.Fatalf("create archive: %v", err)
+	}
+	if err := file.Truncate(maxArchiveFileBody + 1); err != nil {
+		_ = file.Close()
+		t.Fatalf("truncate archive: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatalf("close archive: %v", err)
+	}
+
+	err = validateArchiveFileBodySize(archive)
+	if err == nil || !strings.Contains(err.Error(), "超过 100M 限制") {
+		t.Fatalf("validateArchiveFileBodySize() error = %v, want 100M limit", err)
+	}
+}
+
+func TestRenderScanResultMarkdownShowsTruncatedNotice(t *testing.T) {
+	got := renderScanResultMarkdown(&scanResultResponse{
+		Task:      scanListItem{TaskGroupID: "group-1", Status: "success"},
+		Total:     5001,
+		Items:     []scanDefect{{ID: "defect-1", Severity: "critical"}},
+		Full:      true,
+		Truncated: true,
+	})
+	if !strings.Contains(got, "仅展示前 1 条") {
+		t.Fatalf("renderScanResultMarkdown() missing truncated notice:\n%s", got)
+	}
+}
+
+func TestScanCommandsRejectUnexpectedArgs(t *testing.T) {
+	tests := [][]string{
+		{"scan", "./repo"},
+		{"scan", "list", "extra"},
+	}
+	for _, args := range tests {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			cmd := NewCommand()
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			cmd.SetErr(&out)
+			cmd.SetArgs(args)
+			err := cmd.Execute()
+			if err == nil || !strings.Contains(err.Error(), "unknown command") && !strings.Contains(err.Error(), "accepts 0 arg") {
+				t.Fatalf("Execute(%v) error = %v, output = %s", args, err, out.String())
+			}
+		})
 	}
 }
 
