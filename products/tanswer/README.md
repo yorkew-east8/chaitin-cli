@@ -4,7 +4,7 @@
 
 ## 配置
 
-在当前工作目录的 `config.yaml` 中配置：
+推荐在 `~/.chaitin-cli/config.yaml` 中配置；当前目录下可识别的 `./config.yaml` 会被优先读取：
 
 ```yaml
 tanswer:

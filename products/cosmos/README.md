@@ -6,7 +6,7 @@ Cosmos（万象/AISOC）命令行工具，通过 JSON-RPC 2.0 调用万象后端
 
 ## 配置
 
-在当前工作目录的 `config.yaml` 中配置：
+推荐在 `~/.chaitin-cli/config.yaml` 中配置；当前目录下可识别的 `./config.yaml` 会被优先读取：
 
 ```yaml
 cosmos:
@@ -27,7 +27,7 @@ export COSMOS_API_KEY=YOUR_JWT_TOKEN
 chaitin-cli cosmos --url https://cosmos.example.com --api-key YOUR_JWT_TOKEN asset search-host-asset --count 20 --offset 0
 ```
 
-优先级为 `flags > environment/.env > config.yaml`。
+优先级为 `flags > environment/.env > 识别后的 ./config.yaml > ~/.chaitin-cli/config.yaml`。
 
 注意事项：
 
