@@ -96,7 +96,7 @@ The root command handles configuration loading, product command registration, an
 
 ## Configuration
 
-Put product connection settings in `./config.yaml`:
+Prefer putting product connection settings in `~/.chaitin-cli/config.yaml`. If `./config.yaml` exists in the current directory and has a chaitin-cli product name at the top level, the CLI reads that local config first to keep existing workflows compatible:
 
 ```yaml
 cloudwalker:
@@ -198,14 +198,16 @@ XRAY_URL=https://xray.example.com/api/v2
 XRAY_API_KEY=YOUR_API_KEY
 ```
 
-Priority is `flags > environment/.env > config.yaml`.
+Priority is `flags > environment/.env > recognized ./config.yaml > ~/.chaitin-cli/config.yaml`. If `./config.yaml` does not contain a chaitin-cli product name, it is treated as another project's config and ignored. When a local config is recognized, global config is not merged.
 
-Use root-level `-c` or `--config` to load a different config file. This is useful when you switch between multiple product instances, for example multiple SafeLine environments:
+Use root-level `-c` or `--config` to load a different config file. This is useful when you switch between multiple product instances or temporarily use a project-local config file, for example multiple SafeLine environments:
 
 ```bash
 chaitin-cli -c ./configs/safeline-prod.yaml safeline stats overview
 chaitin-cli -c ./configs/safeline-staging.yaml safeline stats overview
 ```
+
+Commands that create or update config use the same path selection by default: if a recognized `./config.yaml` exists in the current directory, they write to it first; otherwise they write to `~/.chaitin-cli/config.yaml`. When `-c` / `--config` is set explicitly, they write only to the specified file.
 
 Use root-level `--dry-run` for commands that support dry-run:
 
@@ -363,7 +365,7 @@ Check whether the install directory is in `PATH`. The macOS / Linux installer pr
 
 **Where is configuration loaded from?**
 
-Priority is `flags > environment/.env > config.yaml`. Use root-level `-c` or `--config` to load a different config file.
+By default, configuration is loaded first from a current-directory `./config.yaml` recognized as chaitin-cli config, otherwise from `~/.chaitin-cli/config.yaml`. Priority is `flags > environment/.env > recognized ./config.yaml > ~/.chaitin-cli/config.yaml`. Use root-level `-c` or `--config` to load a different config file.
 
 **What should I do if a self-signed certificate causes connection failures?**
 

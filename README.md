@@ -101,7 +101,7 @@ npx skills add chaitin/chaitin-cli
 
 ## 配置
 
-将各产品的连接信息写入 `./config.yaml`：
+推荐将各产品的连接信息写入 `~/.chaitin-cli/config.yaml`。如果当前目录存在 `./config.yaml`，且顶层包含 chaitin-cli 产品名，CLI 会优先读取这个本地配置，以兼容既有使用流程：
 
 ```yaml
 cloudAtlas:
@@ -287,14 +287,16 @@ XRAY_URL=https://xray.example.com/api/v2
 XRAY_API_KEY=YOUR_API_KEY
 ```
 
-优先级为 `flags > environment/.env > config.yaml`
+优先级为 `flags > environment/.env > 识别后的 ./config.yaml > ~/.chaitin-cli/config.yaml`。如果 `./config.yaml` 不包含 chaitin-cli 产品名，会被视为其他项目配置并忽略。识别到本地配置时，不会再合并全局配置。
 
-可以通过根命令的 `-c` 或 `--config` 指定其他配置文件。这在切换多个产品实例时很有用，例如多个 SafeLine 环境：
+可以通过根命令的 `-c` 或 `--config` 指定其他配置文件。这在切换多个产品实例或临时使用项目内配置时很有用，例如多个 SafeLine 环境：
 
 ```bash
 chaitin-cli -c ./configs/safeline-prod.yaml safeline stats overview
 chaitin-cli -c ./configs/safeline-staging.yaml safeline stats overview
 ```
+
+会创建或更新配置的命令默认遵循同样的路径选择：如果当前目录存在可识别的 `./config.yaml`，优先写入本地文件；否则写入 `~/.chaitin-cli/config.yaml`。显式使用 `-c` / `--config` 时，只写入指定文件。
 
 支持 dry-run 的命令可以使用根级别的 `--dry-run`：
 
@@ -433,7 +435,7 @@ task package GOOS=linux GOARCH=amd64
 
 **配置从哪里读取？**
 
-优先级为 `flags > environment/.env > config.yaml`。根命令的 `-c` / `--config` 可以指定其他配置文件。
+默认优先读取当前目录中识别为 chaitin-cli 配置的 `./config.yaml`，否则读取 `~/.chaitin-cli/config.yaml`。优先级为 `flags > environment/.env > 识别后的 ./config.yaml > ~/.chaitin-cli/config.yaml`。根命令的 `-c` / `--config` 可以指定其他配置文件。
 
 **自签名证书连接失败怎么办？**
 

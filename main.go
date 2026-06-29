@@ -29,13 +29,17 @@ import (
 type app struct {
 	root             *cobra.Command
 	aliasSubcommands map[string]struct{}
+	productNames     map[string]struct{}
 	config           config.Raw
 	configPath       string
 	configLoaded     bool
 	dryRun           bool
 }
 
-const defaultConfigPath = "config.yaml"
+const (
+	defaultConfigDir  = ".chaitin-cli"
+	defaultConfigFile = "config.yaml"
+)
 
 func newApp() (*app, error) {
 	root := &cobra.Command{
@@ -48,10 +52,11 @@ func newApp() (*app, error) {
 	a := &app{
 		root:             root,
 		aliasSubcommands: make(map[string]struct{}),
-		configPath:       defaultConfigPathFromCWD(),
+		productNames:     make(map[string]struct{}),
+		configPath:       defaultConfigPath(),
 	}
 
-	root.PersistentFlags().StringVarP(&a.configPath, "config", "c", a.configPath, "Config file path")
+	root.PersistentFlags().StringVarP(&a.configPath, "config", "c", a.configPath, "Config file path; when unset, CLI tries recognized ./config.yaml before ~/.chaitin-cli/config.yaml")
 	root.PersistentFlags().BoolVar(&a.dryRun, "dry-run", false, "Do not send requests; commands that support dry-run print a request summary")
 
 	a.registerProductCommand(chaitin.NewCommand())
@@ -110,6 +115,7 @@ func (a *app) registerProductCommand(cmd *cobra.Command) {
 
 	a.wrapProductCommand(cmd)
 	a.aliasSubcommands[cmd.Name()] = struct{}{}
+	a.productNames[cmd.Name()] = struct{}{}
 	a.root.AddCommand(cmd)
 }
 
@@ -138,11 +144,11 @@ func (a *app) wrapProductCommand(cmd *cobra.Command) {
 		case "codeinsight":
 			codeinsight.ApplyRuntimeConfig(command, a.config, a.dryRun)
 		case "ddr":
-			ddr.ApplyRuntimeConfig(command, a.config, a.configPath, a.dryRun)
+			ddr.ApplyRuntimeConfig(command, a.config, a.writeConfigPath(), a.dryRun)
 		case "dsensor":
 			dsensor.ApplyRuntimeConfig(command, a.config, a.dryRun)
 		case "monkeyscan":
-			monkeyscan.ApplyRuntimeConfig(command, a.config, a.configPath, a.dryRun)
+			monkeyscan.ApplyRuntimeConfig(command, a.config, a.writeConfigPath(), a.dryRun)
 		case "tanswer":
 			tanswer.ApplyRuntimeConfig(command, a.config)
 		case "veinmind":
@@ -175,7 +181,7 @@ func (a *app) ensureRuntimeConfigLoaded() error {
 		return err
 	}
 
-	cfg, err := loadConfigFile(a.configPath)
+	cfg, err := a.loadRuntimeConfig()
 	if err != nil {
 		return err
 	}
@@ -199,8 +205,68 @@ func loadConfigFile(path string) (config.Raw, error) {
 	return config.Load(path)
 }
 
-func defaultConfigPathFromCWD() string {
-	return filepath.Join(".", defaultConfigPath)
+func (a *app) loadRuntimeConfig() (config.Raw, error) {
+	if a.configFlagChanged() {
+		return loadConfigFile(a.configPath)
+	}
+
+	localCfg, localRecognized, err := a.loadLocalConfigIfRecognized()
+	if err == nil && localRecognized {
+		return localCfg, nil
+	}
+
+	globalCfg, err := loadConfigFile(defaultConfigPath())
+	if err != nil {
+		return nil, err
+	}
+	return globalCfg, nil
+}
+
+func (a *app) writeConfigPath() string {
+	if a.configFlagChanged() {
+		return a.configPath
+	}
+	if _, ok, err := a.loadLocalConfigIfRecognized(); err == nil && ok {
+		return localConfigPath()
+	}
+	return defaultConfigPath()
+}
+
+func (a *app) loadLocalConfigIfRecognized() (config.Raw, bool, error) {
+	localCfg, err := loadConfigFile(localConfigPath())
+	if err != nil {
+		return nil, false, err
+	}
+	return localCfg, looksLikeCLIConfig(localCfg, a.productNames), nil
+}
+
+func (a *app) configFlagChanged() bool {
+	if a.root == nil {
+		return a.configPath != "" && a.configPath != defaultConfigPath()
+	}
+	flag := a.root.PersistentFlags().Lookup("config")
+	return flag != nil && flag.Changed
+}
+
+func looksLikeCLIConfig(cfg config.Raw, productNames map[string]struct{}) bool {
+	for name := range cfg {
+		if _, ok := productNames[name]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func localConfigPath() string {
+	return filepath.Join(".", defaultConfigFile)
+}
+
+func defaultConfigPath() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil || homeDir == "" {
+		return localConfigPath()
+	}
+	return filepath.Join(homeDir, defaultConfigDir, defaultConfigFile)
 }
 
 func main() {

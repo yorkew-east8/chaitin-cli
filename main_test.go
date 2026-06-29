@@ -8,13 +8,17 @@ import (
 )
 
 func TestNewAppUsesDefaultConfigPath(t *testing.T) {
+	homeDir := t.TempDir()
+	setTestHome(t, homeDir)
+
 	app, err := newApp()
 	if err != nil {
 		t.Fatalf("newApp() error = %v", err)
 	}
 
-	if app.configPath != defaultConfigPathFromCWD() {
-		t.Fatalf("app.configPath = %q, want %q", app.configPath, defaultConfigPathFromCWD())
+	want := filepath.Join(homeDir, defaultConfigDir, defaultConfigFile)
+	if app.configPath != want {
+		t.Fatalf("app.configPath = %q, want %q", app.configPath, want)
 	}
 }
 
@@ -144,4 +148,186 @@ func TestEnsureRuntimeConfigLoadedWithMissingConfigFile(t *testing.T) {
 	if len(app.config) != 0 {
 		t.Fatalf("len(config) = %d, want 0", len(app.config))
 	}
+}
+
+func TestRuntimeConfigLoadsRecognizedLocalBeforeGlobal(t *testing.T) {
+	homeDir := t.TempDir()
+	workDir := t.TempDir()
+	setTestHome(t, homeDir)
+	withWorkingDir(t, workDir)
+
+	globalPath := filepath.Join(homeDir, defaultConfigDir, defaultConfigFile)
+	if err := os.MkdirAll(filepath.Dir(globalPath), 0o700); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(globalPath, []byte("monkeyscan:\n  url: https://global.example\n  api_key: global-key\ncosmos:\n  url: https://cosmos.example\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile(global) error = %v", err)
+	}
+	if err := os.WriteFile(localConfigPath(), []byte("monkeyscan:\n  url: https://local.example\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile(local) error = %v", err)
+	}
+
+	app, err := newApp()
+	if err != nil {
+		t.Fatalf("newApp() error = %v", err)
+	}
+	if err := app.ensureRuntimeConfigLoaded(); err != nil {
+		t.Fatalf("ensureRuntimeConfigLoaded() error = %v", err)
+	}
+
+	var monkeyscanCfg struct {
+		URL    string `yaml:"url"`
+		APIKey string `yaml:"api_key"`
+	}
+	monkeyscanNode := app.config["monkeyscan"]
+	if err := monkeyscanNode.Decode(&monkeyscanCfg); err != nil {
+		t.Fatalf("Decode(monkeyscan) error = %v", err)
+	}
+	if monkeyscanCfg.URL != "https://local.example" || monkeyscanCfg.APIKey != "" {
+		t.Fatalf("monkeyscan config = %+v, want local config only", monkeyscanCfg)
+	}
+	if _, ok := app.config["cosmos"]; ok {
+		t.Fatal("global cosmos section should not be loaded when local config is recognized")
+	}
+}
+
+func TestRuntimeConfigIgnoresUnrecognizedLocalConfig(t *testing.T) {
+	homeDir := t.TempDir()
+	workDir := t.TempDir()
+	setTestHome(t, homeDir)
+	withWorkingDir(t, workDir)
+
+	globalPath := filepath.Join(homeDir, defaultConfigDir, defaultConfigFile)
+	if err := os.MkdirAll(filepath.Dir(globalPath), 0o700); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(globalPath, []byte("monkeyscan:\n  url: https://global.example\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile(global) error = %v", err)
+	}
+	if err := os.WriteFile(localConfigPath(), []byte("database:\n  host: localhost\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile(local) error = %v", err)
+	}
+
+	app, err := newApp()
+	if err != nil {
+		t.Fatalf("newApp() error = %v", err)
+	}
+	if err := app.ensureRuntimeConfigLoaded(); err != nil {
+		t.Fatalf("ensureRuntimeConfigLoaded() error = %v", err)
+	}
+
+	if _, ok := app.config["database"]; ok {
+		t.Fatal("unrecognized local config section should be ignored")
+	}
+	var monkeyscanCfg struct {
+		URL string `yaml:"url"`
+	}
+	monkeyscanNode := app.config["monkeyscan"]
+	if err := monkeyscanNode.Decode(&monkeyscanCfg); err != nil {
+		t.Fatalf("Decode(monkeyscan) error = %v", err)
+	}
+	if monkeyscanCfg.URL != "https://global.example" {
+		t.Fatalf("monkeyscan url = %q, want global", monkeyscanCfg.URL)
+	}
+}
+
+func TestRuntimeConfigFallsBackToGlobalWhenLocalConfigParseFails(t *testing.T) {
+	homeDir := t.TempDir()
+	workDir := t.TempDir()
+	setTestHome(t, homeDir)
+	withWorkingDir(t, workDir)
+
+	globalPath := filepath.Join(homeDir, defaultConfigDir, defaultConfigFile)
+	if err := os.MkdirAll(filepath.Dir(globalPath), 0o700); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(globalPath, []byte("monkeyscan:\n  url: https://global.example\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile(global) error = %v", err)
+	}
+	if err := os.WriteFile(localConfigPath(), []byte("monkeyscan:\n  url: [broken\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile(local) error = %v", err)
+	}
+
+	app, err := newApp()
+	if err != nil {
+		t.Fatalf("newApp() error = %v", err)
+	}
+	if err := app.ensureRuntimeConfigLoaded(); err != nil {
+		t.Fatalf("ensureRuntimeConfigLoaded() error = %v", err)
+	}
+
+	var monkeyscanCfg struct {
+		URL string `yaml:"url"`
+	}
+	monkeyscanNode := app.config["monkeyscan"]
+	if err := monkeyscanNode.Decode(&monkeyscanCfg); err != nil {
+		t.Fatalf("Decode(monkeyscan) error = %v", err)
+	}
+	if monkeyscanCfg.URL != "https://global.example" {
+		t.Fatalf("monkeyscan url = %q, want global", monkeyscanCfg.URL)
+	}
+}
+
+func TestWriteConfigPathUsesRecognizedLocalConfig(t *testing.T) {
+	homeDir := t.TempDir()
+	workDir := t.TempDir()
+	setTestHome(t, homeDir)
+	withWorkingDir(t, workDir)
+
+	if err := os.WriteFile(localConfigPath(), []byte("monkeyscan:\n  url: https://local.example\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile(local) error = %v", err)
+	}
+	app, err := newApp()
+	if err != nil {
+		t.Fatalf("newApp() error = %v", err)
+	}
+	if got := app.writeConfigPath(); got != localConfigPath() {
+		t.Fatalf("writeConfigPath() = %q, want %q", got, localConfigPath())
+	}
+}
+
+func TestWriteConfigPathUsesGlobalWhenLocalMissingOrUnrecognized(t *testing.T) {
+	homeDir := t.TempDir()
+	workDir := t.TempDir()
+	setTestHome(t, homeDir)
+	withWorkingDir(t, workDir)
+
+	app, err := newApp()
+	if err != nil {
+		t.Fatalf("newApp() error = %v", err)
+	}
+	if got := app.writeConfigPath(); got != defaultConfigPath() {
+		t.Fatalf("writeConfigPath() without local = %q, want %q", got, defaultConfigPath())
+	}
+
+	if err := os.WriteFile(localConfigPath(), []byte("database:\n  host: localhost\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile(local) error = %v", err)
+	}
+	if got := app.writeConfigPath(); got != defaultConfigPath() {
+		t.Fatalf("writeConfigPath() with unrecognized local = %q, want %q", got, defaultConfigPath())
+	}
+}
+
+func withWorkingDir(t *testing.T, dir string) {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd() error = %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("Chdir() error = %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(wd); err != nil {
+			t.Fatalf("Chdir() cleanup error = %v", err)
+		}
+	})
+}
+
+func setTestHome(t *testing.T, dir string) {
+	t.Helper()
+	t.Setenv("HOME", dir)
+	t.Setenv("USERPROFILE", dir)
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 }
