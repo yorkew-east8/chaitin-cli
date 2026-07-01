@@ -2,6 +2,7 @@ package monkeyscan
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -248,6 +249,45 @@ func TestClientArchiveScanEndpointSendsTypeAndDisplayNames(t *testing.T) {
 	}
 	if created.TaskGroupID != "group-2" {
 		t.Fatalf("CreateArchiveScanWithName() = %+v", created)
+	}
+}
+
+func TestRunScanFileReturnsArchiveUploadError(t *testing.T) {
+	oldCfg, oldDryRun := runtimeCfg, dryRun
+	t.Cleanup(func() {
+		runtimeCfg = oldCfg
+		dryRun = oldDryRun
+	})
+	dryRun = false
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/cli/scans" || r.URL.Query().Get("type") != "archive" {
+			t.Fatalf("unexpected request: %s?%s", r.URL.Path, r.URL.RawQuery)
+		}
+		w.WriteHeader(http.StatusForbidden)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "user is not activated"})
+	}))
+	defer server.Close()
+	runtimeCfg = Config{URL: server.URL, APIKey: "key"}
+
+	sourceDir := t.TempDir()
+	writeFile(t, filepath.Join(sourceDir, "README.md"), "hello\n")
+	archive := filepath.Join(t.TempDir(), "source.zip")
+	if err := zipDirectory(sourceDir, archive); err != nil {
+		t.Fatalf("zipDirectory() error = %v", err)
+	}
+
+	cmd := NewCommand()
+	cmd.SetContext(context.Background())
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	err := runScan(cmd, scanOptions{File: archive})
+	if err == nil || !strings.Contains(err.Error(), "user is not activated") {
+		t.Fatalf("runScan() error = %v, want user is not activated", err)
+	}
+	if strings.Contains(out.String(), "MonkeyScan 扫描任务已创建") {
+		t.Fatalf("runScan printed created message on error:\n%s", out.String())
 	}
 }
 

@@ -261,7 +261,9 @@ func runScan(cmd *cobra.Command, opts scanOptions) error {
 			TaskName: "",
 		})
 	} else {
-		archivePath, cleanup, err := prepareScanArchive(opts)
+		var archivePath string
+		var cleanup func()
+		archivePath, cleanup, err = prepareScanArchive(opts)
 		if err != nil {
 			return err
 		}
